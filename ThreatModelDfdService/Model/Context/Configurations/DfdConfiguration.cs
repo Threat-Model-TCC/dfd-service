@@ -13,5 +13,6 @@ public class DfdConfiguration : IEntityTypeConfiguration<Dfd>
         builder.Property(d => d.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(d => d.LevelNumber).HasColumnName("level_number");
         builder.Property(d => d.DfdParentId).HasColumnName("dfd_parent_id");
+        builder.Property(d => d.ProjectId).HasColumnName("project_id");
     }
 }

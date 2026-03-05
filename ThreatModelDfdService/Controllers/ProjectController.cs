@@ -34,4 +34,11 @@ public class ProjectController(ProjectService projectService) : ControllerBase
     {
         return Ok(projectService.UpdateProject(id, dto));
     }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteProject([FromRoute] long id)
+    {
+        await projectService.DeleteProjectAsync(id);
+        return NoContent();
+    }
 }

@@ -50,6 +50,7 @@ public class GenericRepository<T> : IRepository<T> where T : BaseEntity
     public void Update(T t)
     {
         dataset.Update(t);
+        context.SaveChanges();
     }
 
     public void Delete(T t)

@@ -6,12 +6,6 @@ namespace ThreatModelDfdService.Services.Impl;
 
 public class DfdService(DfdElementService dfdElementService, MSSQLContext context)
 {
-    public DfdDTO CreateDfd()
-    {
-        Dfd dfd = Create(0, null);
-        return new DfdDTO(dfd.Id, dfd.DfdParentId, dfd.LevelNumber, []);
-    }
-
     public async Task<List<DfdElementResponseDTO>> SyncElementsAsync(long dfdId, List<UpsertDfdElementDTO> dtos)
     {
         foreach (var dto in dtos)
@@ -25,7 +19,8 @@ public class DfdService(DfdElementService dfdElementService, MSSQLContext contex
     public DfdDTO CreateChildDfd(CreateDfdChildDTO dto)
     {
         DfdElement processParent = dfdElementService.GetById(dto.ProcessParentId);
-        Dfd childDfd = Create(dto.LevelNumber + 1, processParent.DfdId);
+        Dfd dfd = FindById(processParent.DfdId);
+        Dfd childDfd = Create(dto.LevelNumber + 1, dfd.ProjectId, processParent.DfdId);
 
         Process process = (Process) processParent;
         process.DfdChildId = childDfd.Id;
@@ -34,10 +29,11 @@ public class DfdService(DfdElementService dfdElementService, MSSQLContext contex
         return new DfdDTO(childDfd.Id, childDfd.DfdParentId, childDfd.LevelNumber, []);
     }
 
-    public Dfd Create(int LevelNumber, long? dfdParentId = null)
+    public Dfd Create(int LevelNumber, long projectId, long? dfdParentId = null)
     {
         Dfd dfd = context.Dfds.Add(new Dfd {
             LevelNumber = LevelNumber,
+            ProjectId = projectId,
             DfdParentId = dfdParentId
         }).Entity;
         context.SaveChanges();
@@ -46,9 +42,14 @@ public class DfdService(DfdElementService dfdElementService, MSSQLContext contex
 
     public DfdDTO GetDfdById(long id)
     {
+        Dfd dfd = FindById(id);
+        return new DfdDTO(dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id));
+    }
+
+    public Dfd FindById(long id)
+    {
         Dfd? dfd = context.Dfds.Find(id);
         if (dfd == null) throw new KeyNotFoundException("DFD not found with the provided ID: " + id);
-
-        return new DfdDTO(dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id));
+        return dfd;
     }
 }
