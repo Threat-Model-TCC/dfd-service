@@ -14,8 +14,12 @@ public class ProjectService(
 {
     public ProjectResponseDTO CreateProject(CreateProjectDTO dto)
     {
-        Dfd contextDiagram = dfdService.Create(0);
-        var project = CreateNewProjectEntity(dto, contextDiagram.Id);
+        Project project = CreateNewProjectEntity(dto);
+        
+        Dfd contextDiagram = dfdService.Create(0, project.Id);
+        project.ContextDiagramId = contextDiagram.Id;
+        projectRepository.Update(project);
+
         return new ProjectResponseDTO(
             project.Id,
             project.Title,
@@ -39,6 +43,7 @@ public class ProjectService(
             project.CreatedAt
         );
     }
+
     public async Task<PagedProjectResponseDTO> GetPagedProjectsAsync(int page, int size)
     {
         var totalItems = await _context.Projects.CountAsync();
@@ -62,13 +67,18 @@ public class ProjectService(
         return new PagedProjectResponseDTO(page, totalPages, projects);
     }
 
-    private Project CreateNewProjectEntity(CreateProjectDTO dto, long ContextDiagramId)
+    public async Task DeleteProjectAsync(long id)
+    {
+        Project project = FindById(id);
+        projectRepository.Delete(project);
+    }
+
+    private Project CreateNewProjectEntity(CreateProjectDTO dto)
     {
         Project project = new Project
         {
             Title = dto.Name,
             Description = dto.Description,
-            ContextDiagramId = ContextDiagramId,
             CreatedAt = DateTime.UtcNow
         };
         return projectRepository.Create(project);

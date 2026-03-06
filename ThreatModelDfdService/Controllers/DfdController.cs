@@ -8,12 +8,6 @@ namespace ThreatModelDfdService.Controllers;
 [Route("dfd")]
 public class DfdController(DfdService service) : ControllerBase
 {
-    [HttpPost]
-    public ActionResult<DfdDTO> CreateDfd()
-    {
-        DfdDTO payload = service.CreateDfd();
-        return CreatedAtAction(null, null, payload);
-    }
 
     [HttpPost("child")]
     public ActionResult<DfdDTO> CreateDfdChild([FromBody] CreateDfdChildDTO dto)

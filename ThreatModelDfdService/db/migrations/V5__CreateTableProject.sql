@@ -3,6 +3,14 @@ CREATE TABLE projects (
     title VARCHAR(255),
     description NVARCHAR(MAX),
     context_diagram_id BIGINT,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT fk_projects_Dfds FOREIGN KEY (context_diagram_id) REFERENCES dfds (id)
+    created_at DATETIME2 DEFAULT GETDATE()
 );
+
+ALTER TABLE dfds
+ADD project_id BIGINT;
+
+ALTER TABLE dfds
+ADD CONSTRAINT fk_dfds_project_id
+FOREIGN KEY (project_id)
+REFERENCES projects(id)
+ON DELETE CASCADE;
