@@ -19,145 +19,130 @@ const DFD_TYPES = {
 };
 
 const styles = {
-  toolbar: {
-    padding: '10px',
-    backgroundColor: '#fff',
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'center',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-    borderRadius: '8px',
-    marginBottom: '10px',
-    flexWrap: 'wrap'
-  },
-  button: {
-    padding: '8px 12px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    border: 'none',
-    borderRadius: '4px',
-    fontWeight: 'bold',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px'
-  },
+  toolbar: { padding: '10px', backgroundColor: '#fff', display: 'flex', gap: '10px', alignItems: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.2)', borderRadius: '8px', marginBottom: '10px', flexWrap: 'wrap' },
+  button: { padding: '8px 12px', fontSize: '12px', cursor: 'pointer', border: 'none', borderRadius: '4px', fontWeight: 'bold', color: 'white', display: 'flex', alignItems: 'center', gap: '5px' },
   btnProcess: { backgroundColor: '#17a2b8' }, 
   btnActor: { backgroundColor: '#28a745' },
   btnStore: { backgroundColor: '#ffc107', color: '#000' }, 
   btnSave: { backgroundColor: '#007bff', marginLeft: 'auto' },
   btnLoad: { backgroundColor: '#6c757d', color: '#fff' },
-  btnBack: { backgroundColor: '#dc3545', marginRight: 'auto' }, // Novo botão voltar
+  btnBack: { backgroundColor: '#dc3545', marginRight: 'auto' }, 
   status: { fontSize: '11px', color: '#666', width: '100%', marginTop: '5px' },
-  // Estilos do Dashboard
   dashboardContainer: { padding: '40px', fontFamily: 'sans-serif', color: '#333' },
   table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
   th: { borderBottom: '2px solid #ddd', padding: '10px', textAlign: 'left' },
   td: { borderBottom: '1px solid #ddd', padding: '10px' },
-  btnEdit: { backgroundColor: '#007bff', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' },
-  btnCreate: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }
+  btnCreate: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
+  // Botões da tabela
+  actionsContainer: { display: 'flex', gap: '8px' },
+  btnOpen: { backgroundColor: '#007bff', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' },
+  btnEdit: { backgroundColor: '#ffc107', color: 'black', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
+  btnDelete: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }
 };
 
-// --- FUNÇÃO DE ESTILO DO CANVAS (Mantida igual) ---
 const getStyleByType = (typeString) => {
-  let baseStyle = { 
-    background: '#fff', padding: 10, textAlign: 'center', display: 'flex', 
-    alignItems: 'center', justifyContent: 'center', fontSize: '12px'
-  };
-
-  if (typeString === DFD_TYPES.PROCESS) {
-    return { ...baseStyle, border: '1px solid black', borderRadius: '50%', width: 100, height: 100 };
-  } else if (typeString === DFD_TYPES.ACTOR) {
-    return { ...baseStyle, border: '1px solid black', borderRadius: '4px', width: 150, height: 60 };
-  } else if (typeString === DFD_TYPES.DATA_STORE) {
-    return { 
-      ...baseStyle, width: 150, height: 60, border: 'none',             
-      borderTop: '2px solid black', borderBottom: '2px solid black', borderRadius: 0             
-    };
-  }
+  let baseStyle = { background: '#fff', padding: 10, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' };
+  if (typeString === DFD_TYPES.PROCESS) return { ...baseStyle, border: '1px solid black', borderRadius: '50%', width: 100, height: 100 };
+  else if (typeString === DFD_TYPES.ACTOR) return { ...baseStyle, border: '1px solid black', borderRadius: '4px', width: 150, height: 60 };
+  else if (typeString === DFD_TYPES.DATA_STORE) return { ...baseStyle, width: 150, height: 60, border: 'none', borderTop: '2px solid black', borderBottom: '2px solid black', borderRadius: 0 };
   return { ...baseStyle, border: '1px solid black', width: 150 };
 };
 
 // ==========================================
-// COMPONENTE 1: TELA INICIAL (DASHBOARD) - INTEGRADO
+// COMPONENTE 1: TELA INICIAL (DASHBOARD)
 // ==========================================
 function Dashboard({ onOpenProject }) {
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  // Estado inicial vazio, esperando o backend
-  const [paginatedData, setPaginatedData] = useState({
-    currentPage: 1,
-    pages: 0,
-    projects: []
-  });
+  const [paginatedData, setPaginatedData] = useState({ currentPage: 1, pages: 0, projects: [] });
   const [loading, setLoading] = useState(false);
 
-  // --- REQUISIÇÃO GET (Carregar Lista) ---
+  // --- REQUISIÇÃO GET ---
   const loadProjects = async () => {
     setLoading(true);
-    console.log("Fazendo requisição GET para o backend...");
     try {
       const response = await fetch(`${BASE_URL}/projects?page=1&size=10`);
       if (response.ok) {
         const data = await response.json();
-        console.log("Dados recebidos do GET:", data);
-        setPaginatedData(data); // Atualiza a tabela com os dados reais
-      } else {
-        console.error("Erro ao buscar projetos. Status:", response.status);
+        setPaginatedData(data);
       }
     } catch (error) {
-      console.error("Erro de conexão com o backend (GET):", error);
+      console.error("Erro GET:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Chama o GET automaticamente quando a tela abre
-  useEffect(() => {
-    loadProjects();
-  }, []);
+  useEffect(() => { loadProjects(); }, []);
 
-  // --- REQUISIÇÃO POST (Criar Projeto) ---
+  // --- REQUISIÇÃO POST ---
   const handleCreateNewProject = async () => {
     const projectName = prompt("Digite o nome do novo projeto:");
     if (!projectName) return; 
     const projectDesc = prompt("Digite a descrição do projeto:");
 
-    const payload = {
-      name: projectName,
-      description: projectDesc || "Sem descrição"
-    };
-
-    console.log("Enviando POST para o backend...", payload);
     try {
       const response = await fetch(`${BASE_URL}/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ name: projectName, description: projectDesc || "Sem descrição" })
+      });
+      if (response.ok) {
+        await loadProjects();
+      }
+    } catch (error) {
+      console.error("Erro POST:", error);
+    }
+  };
+
+  // --- REQUISIÇÃO PUT (Editar) ---
+  const handleEditProject = async (id, currentName, currentDesc) => {
+    const newName = prompt("Edite o nome do projeto:", currentName);
+    if (!newName) return; // Cancela se deixar em branco
+    const newDesc = prompt("Edite a descrição do projeto:", currentDesc);
+
+    try {
+      const response = await fetch(`${BASE_URL}/projects/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName, description: newDesc || "Sem descrição" })
       });
 
       if (response.ok) {
-        const newProject = await response.json();
-        console.log("Projeto criado com sucesso no banco!", newProject);
-        
-        // Atualiza a tabela na tela adicionando o novo projeto
-        setPaginatedData(prevState => ({
-          ...prevState,
-          projects: [...prevState.projects, newProject]
-        }));
+        console.log(`Projeto ${id} editado com sucesso.`);
+        await loadProjects(); // Recarrega a tabela para mostrar o dado atualizado
       } else {
-        console.error("Erro ao criar projeto. Status:", response.status);
-        alert("Falha ao criar o projeto. Verifique o console.");
+        alert("Erro ao editar o projeto.");
       }
     } catch (error) {
-      console.error("Erro de conexão com o backend (POST):", error);
+      console.error("Erro PUT:", error);
+    }
+  };
+
+  // --- REQUISIÇÃO DELETE (Excluir) ---
+  const handleDeleteProject = async (id) => {
+    const confirmDelete = window.confirm("Tem certeza que deseja excluir este projeto? Essa ação não pode ser desfeita.");
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`${BASE_URL}/projects/${id}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        console.log(`Projeto ${id} excluído com sucesso.`);
+        await loadProjects(); // Recarrega a tabela para sumir com a linha
+      } else {
+        alert("Erro ao excluir o projeto.");
+      }
+    } catch (error) {
+      console.error("Erro DELETE:", error);
     }
   };
 
   const formatDate = (isoString) => {
     if (!isoString) return "-";
-    const date = new Date(isoString);
-    return date.toLocaleDateString('pt-BR');
+    return new Date(isoString).toLocaleDateString('pt-BR');
   };
 
   return (
@@ -185,7 +170,7 @@ function Dashboard({ onOpenProject }) {
             </thead>
             <tbody>
               {paginatedData.projects && paginatedData.projects.length === 0 ? (
-                <tr><td colSpan="5" style={{...styles.td, textAlign: 'center'}}>Nenhum projeto encontrado no banco.</td></tr>
+                <tr><td colSpan="5" style={{...styles.td, textAlign: 'center'}}>Nenhum projeto encontrado.</td></tr>
               ) : (
                 paginatedData.projects && paginatedData.projects.map(proj => (
                   <tr key={proj.id}>
@@ -194,9 +179,17 @@ function Dashboard({ onOpenProject }) {
                     <td style={styles.td}>{proj.description}</td>
                     <td style={styles.td}>{formatDate(proj.createdAt)}</td>
                     <td style={styles.td}>
-                      <button style={styles.btnEdit} onClick={() => onOpenProject(proj.contextDiagramId)}>
-                        ✏️ Abrir Diagrama
-                      </button>
+                      <div style={styles.actionsContainer}>
+                        <button style={styles.btnOpen} onClick={() => onOpenProject(proj.contextDiagramId)}>
+                          📂 Abrir
+                        </button>
+                        <button style={styles.btnEdit} onClick={() => handleEditProject(proj.id, proj.name, proj.description)}>
+                          ✏️ Editar
+                        </button>
+                        <button style={styles.btnDelete} onClick={() => handleDeleteProject(proj.id)}>
+                          🗑️ Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
