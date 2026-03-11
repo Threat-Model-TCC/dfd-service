@@ -1,12 +1,12 @@
 # DFD Service
 
-Este projeto consiste em uma API desenvolvida em .NET 10 para a gestão de Diagramas de Fluxo de Dados (DFD), com suporte à modelagem de ameaças e persistência em SQL Server.
+Este projeto consiste em uma API desenvolvida em React (front-end), .NET 10 (back-end) e SQL Server (database) para a gestão de Diagramas de Fluxo de Dados (DFD).
 
 ---
 
 ### Observação importante sobre essa versão
 
-No momento, a tela (frontend) de modelagem do diagrama está desatualizada em relação ao backend atual. Dessa forma, ela não funcionará para desenhar ou modelar os diagramas.
+No momento, a persistência dos fluxos de dados (setas) não está implementada. Dessa forma, setas não serão salvas na modelagem de um diagrama.
 
 Na próxima história de usuário esperamos resolver essa pendência e finalizar essa funcionalidade.
 
