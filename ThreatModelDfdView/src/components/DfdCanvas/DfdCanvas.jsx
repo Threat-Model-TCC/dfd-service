@@ -14,10 +14,21 @@ import { DFD_TYPES } from '../../constants/dfdTypes';
 import { styles } from '../../styles/commonStyles';
 import { getStyleByType } from '../../utils/dfdUtils';
 
-export default function DfdCanvas({ projectId, onBack }) {
+export default function DfdCanvas({ 
+  dfdId, 
+  levelNumber = 0,
+  parentDfdId = null,
+  onDecompose,
+  onReturnToParent,
+  canReturn = false,
+  onBackToDashboard
+}) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [status, setStatus] = useState("Ready.");
+  const [currentDfdData, setCurrentDfdData] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
@@ -40,6 +51,56 @@ export default function DfdCanvas({ projectId, onBack }) {
     }
   }, []);
 
+  // Função para decomposição de processos
+  const handleDecompose = async (processNode) => {
+    if (processNode.data.type !== DFD_TYPES.PROCESS) {
+      setStatus("Somente Process pode ser decomposto.");
+      return;
+    }
+
+    setStatus("Decompondo processo...");
+    setContextMenu(null);
+
+    try {
+      let dfdData;
+
+      const processElement = currentDfdData?.elements.find(el => el.id.toString() === processNode.id);
+      
+      if (processElement?.dfdChildId && processElement.dfdChildId > 0) {
+        // Se já tem um dfdChildId preenchido, fazer GET /dfd/{id}
+        const response = await fetch(`${BASE_URL}/dfd/${processElement.dfdChildId}`);
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar DFD filho: ${response.status}`);
+        }
+        dfdData = await response.json();
+      } else {
+        // Se não tem dfdChildId, fazer POST /dfd/child
+        const payload = {
+          processParentId: parseInt(processNode.id),
+          levelNumber: levelNumber
+        };
+
+        const response = await fetch(`${BASE_URL}/dfd/child`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erro ao criar DFD filho: ${response.status}`);
+        }
+        dfdData = await response.json();
+      }
+
+      // Redirecionar para o novo DFD
+      onDecompose(dfdData.id, dfdData.levelNumber, dfdData.dfdParentId);
+      setStatus(`Decomposto! Entrando no nível ${dfdData.levelNumber}...`);
+    } catch (error) {
+      console.error("Erro na decomposição:", error);
+      setStatus(`Erro na decomposição: ${error.message}`);
+    }
+  };
+
   const handleAddElement = (typeString, labelDefault) => {
     const name = prompt(`Enter name for ${labelDefault}:`, labelDefault);
     if (!name) return;
@@ -57,24 +118,27 @@ export default function DfdCanvas({ projectId, onBack }) {
   };
 
   const loadData = async () => {
-    setStatus(`Loading diagram ${projectId} from DB...`);
+    setStatus(`Loading diagram ${dfdId} from DB...`);
     try {
-      const response = await fetch(`${BASE_URL}/dfd/${projectId}`);
+      const response = await fetch(`${BASE_URL}/dfd/${dfdId}`);
       if (response.ok) {
         const data = await response.json();
+        
+        // Armazenar dados completos do DFD
+        setCurrentDfdData(data);
         
         // Mapeando do padrão do backend para o padrão do ReactFlow
         const loadedNodes = data.elements.map(item => ({
           id: item.id.toString(),
           type: 'default',
           position: { x: item.xValue, y: item.yValue },
-          data: { label: item.name, type: item.type },
+          data: { label: item.name, type: item.type, dfdChildId: item.dfdChildId },
           style: getStyleByType(item.type)
         }));
         
         setNodes(loadedNodes);
         setEdges([]); // Setas ainda não implementadas no backend
-        setStatus(`Loaded ${data.elements.length} elements.`);
+        setStatus(`Loaded ${data.elements.length} elements. Level: ${data.levelNumber}`);
       } else {
         setStatus(`Error loading: ${response.status}`);
       }
@@ -99,7 +163,7 @@ export default function DfdCanvas({ projectId, onBack }) {
     }));
 
     try {
-      const response = await fetch(`${BASE_URL}/dfd/${projectId}/elements`, {
+      const response = await fetch(`${BASE_URL}/dfd/${dfdId}/elements`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -119,7 +183,22 @@ export default function DfdCanvas({ projectId, onBack }) {
     }
   };
 
-  useEffect(() => { loadData(); }, [projectId]);
+  // Listener para menu de contexto ao clicar com botão direito em um nó
+  const onNodeContextMenu = useCallback((e, node) => {
+    e.preventDefault();
+    
+    if (node.data.type === DFD_TYPES.PROCESS) {
+      setSelectedNode(node);
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    }
+  }, []);
+
+  // Fechar menu de contexto ao clicar em outro lugar
+  const handleCanvasClick = () => {
+    setContextMenu(null);
+  };
+
+  useEffect(() => { loadData(); }, [dfdId]);
 
   const onNodeDoubleClick = (e, node) => {
     const newName = prompt("Edit Name:", node.data.label);
@@ -129,7 +208,7 @@ export default function DfdCanvas({ projectId, onBack }) {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
+    <div style={{ width: '100vw', height: '100vh' }} onClick={handleCanvasClick}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -137,14 +216,26 @@ export default function DfdCanvas({ projectId, onBack }) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
         onNodesDelete={onNodesDelete} /* <-- Adicionado o gatilho de exclusão aqui */
         fitView
       >
         <Panel position="top-left">
           <div style={styles.toolbar}>
-            <button style={{...styles.button, ...styles.btnBack}} onClick={onBack}>
-              ⬅ Voltar
+            <button style={{...styles.button, ...styles.btnBack}} onClick={onBackToDashboard}>
+              ⬅ Dashboard
             </button>
+            
+            {canReturn && (
+              <button 
+                style={{...styles.button, ...styles.btnBack}} 
+                onClick={onReturnToParent}
+                title="Voltar para o nível anterior"
+              >
+                ⬆ Nível Anterior
+              </button>
+            )}
+            
             <div style={{width: '1px', height: '20px', background: '#ccc', margin: '0 5px'}}></div>
 
             <button style={{...styles.button, ...styles.btnProcess}} onClick={() => handleAddElement(DFD_TYPES.PROCESS, "New Process")}>⚙️ Process</button>
@@ -155,9 +246,46 @@ export default function DfdCanvas({ projectId, onBack }) {
 
             <button style={{...styles.button, ...styles.btnLoad}} onClick={loadData}>📂 Load DB</button>
             <button style={{...styles.button, ...styles.btnSave}} onClick={saveAll}>💾 Save</button>
-            <div style={styles.status}>{status} (Project ID: {projectId})</div>
+            <div style={styles.status}>{status} (DFD ID: {dfdId} | Level: {levelNumber})</div>
           </div>
         </Panel>
+
+        {/* Menu de Contexto para Decomposição */}
+        {contextMenu && selectedNode && (
+          <div
+            style={{
+              position: 'fixed',
+              left: contextMenu.x,
+              top: contextMenu.y,
+              backgroundColor: '#fff',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              zIndex: 1000,
+              padding: 0
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => handleDecompose(selectedNode)}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '10px 15px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '14px'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            >
+              🔍 Decompor
+            </button>
+          </div>
+        )}
+
         <Controls />
         <MiniMap />
         <Background gap={12} size={1} />
