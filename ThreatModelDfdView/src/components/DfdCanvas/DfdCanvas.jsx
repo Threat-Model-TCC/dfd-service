@@ -105,11 +105,18 @@ export default function DfdCanvas({
     const name = prompt(`Enter name for ${labelDefault}:`, labelDefault);
     if (!name) return;
 
+    // GERAMOS O UUID AQUI
+    const generatedUuid = crypto.randomUUID();
+
     const newNode = {
       id: `temp_${Date.now()}`,
       type: 'default',
       position: { x: Math.random() * 300 + 50, y: Math.random() * 300 + 50 },
-      data: { label: name, type: typeString },
+      data: { 
+        label: name, 
+        type: typeString,
+        uuid: generatedUuid // ADICIONADO AO ESTADO DO NÓ
+      },
       style: getStyleByType(typeString)
     };
 
@@ -132,7 +139,13 @@ export default function DfdCanvas({
           id: item.id.toString(),
           type: 'default',
           position: { x: item.xValue, y: item.yValue },
-          data: { label: item.name, type: item.type, dfdChildId: item.dfdChildId },
+          data: { 
+            label: item.name, 
+            type: item.type, 
+            dfdChildId: item.dfdChildId,
+            // Preparamos para receber o UUID do banco. Se não vier (elementos antigos), geramos um só pra não ficar vazio.
+            uuid: item.uuid || crypto.randomUUID() 
+          },
           style: getStyleByType(item.type)
         }));
         
@@ -151,7 +164,8 @@ export default function DfdCanvas({
   const saveAll = async () => {
     setStatus("Saving changes...");
 
-    // Mapeando do padrão do ReactFlow para o padrão que o PUT do backend espera
+    // Mapeando do padrão do ReactFlow para o padrão que o PUT do backend espera.
+    // NOTA: Conforme solicitado, ainda NÃO estamos enviando o `uuid` para o backend aqui.
     const payload = nodes.map(node => ({
       id: node.id.startsWith('temp_') ? 0 : parseInt(node.id),
       name: node.data.label,
@@ -217,7 +231,7 @@ export default function DfdCanvas({
         onConnect={onConnect}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeContextMenu={onNodeContextMenu}
-        onNodesDelete={onNodesDelete} /* <-- Adicionado o gatilho de exclusão aqui */
+        onNodesDelete={onNodesDelete}
         fitView
       >
         <Panel position="top-left">
