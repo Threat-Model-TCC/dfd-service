@@ -19,6 +19,21 @@ public class DataFlowConfiguration : IEntityTypeConfiguration<DataFlow>
             .HasColumnName("description")
             .HasMaxLength(500);
 
+        builder.Property(f => f.DfdId)
+            .HasColumnName("dfd_id");
+
+        builder.Property(f => f.SourceElementId)
+            .HasColumnName("source_element_id");
+
+        builder.Property(f => f.TargetElementId)
+            .HasColumnName("target_element_id");
+
+        builder.Property(f => f.SourcePosition)
+            .HasColumnName("source_position");
+
+        builder.Property(f => f.TargetPosition)
+            .HasColumnName("target_position");
+
         // Relacionamento com Elemento de Origem
         builder.HasOne(f => f.SourceElement)
             .WithMany()
