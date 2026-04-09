@@ -10,5 +10,6 @@ public record DfdElementResponseDTO(
     decimal YValue,
     decimal Width,
     decimal Height,
-    long? DfdChildId
+    long? DfdChildId,
+    string Uuid
 );

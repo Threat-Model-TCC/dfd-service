@@ -4,16 +4,28 @@ using ThreatModelDfdService.Model.Entity;
 
 namespace ThreatModelDfdService.Services.Impl;
 
-public class DfdService(DfdElementService dfdElementService, MSSQLContext context)
+public class DfdService(
+    DfdElementService dfdElementService,
+    DataFlowService dataFlowService,
+    MSSQLContext context)
 {
-    public async Task<List<DfdElementResponseDTO>> SyncElementsAsync(long dfdId, List<UpsertDfdElementDTO> dtos)
+    public async Task<FullDfdResponseDTO> SyncElementsAsync(long dfdId, UpsertAllDfdElementsDTO dto)
     {
-        foreach (var dto in dtos)
+        foreach (var elementDto in dto.Elements)
         {
-            await dfdElementService.CreateOrUpdateAsync(dfdId, dto);
+            await dfdElementService.CreateOrUpdateAsync(dfdId, elementDto);
+        }
+
+        foreach (var dataFlowDto in dto.DataFlows)
+        {
+            await dataFlowService.CreateOrUpdateDataFlow(dataFlowDto);
         }
         await context.SaveChangesAsync();
-        return dfdElementService.GetDfdElementsByDfdId(dfdId);
+        
+        return new FullDfdResponseDTO(
+            dfdElementService.GetDfdElementsByDfdId(dfdId),
+            dataFlowService.GetDataFlowsByDfdId(dfdId)
+        );
     }
 
     public DfdDTO CreateChildDfd(CreateDfdChildDTO dto)

@@ -17,10 +17,10 @@ public class DfdController(DfdService service) : ControllerBase
     }
 
     [HttpPut("{id}/elements")]
-    public async Task<ActionResult<List<DfdElementResponseDTO>>> UpdateElements(
-        long id, [FromBody] List<UpsertDfdElementDTO> elements)
+    public async Task<ActionResult<FullDfdResponseDTO>> UpdateElements(
+        long id, [FromBody] UpsertAllDfdElementsDTO dto)
     {
-        var result = await service.SyncElementsAsync(id, elements);
+        var result = await service.SyncElementsAsync(id, dto);
         return Ok(result);
     }
 

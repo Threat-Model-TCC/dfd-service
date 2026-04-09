@@ -22,5 +22,6 @@ public class DfdElementConfiguration : IEntityTypeConfiguration<DfdElement>
         builder.Property(e => e.Height).HasColumnName("height").HasPrecision(10, 3);
         builder.Property(e => e.Type).HasColumnName("type").HasConversion<string>().HasMaxLength(50);
         builder.Property(e => e.DfdId).HasColumnName("dfd_id");
+        builder.Property(e => e.UuidIdentifier).HasColumnName("uuid_identifier");
     }
 }
