@@ -16,9 +16,11 @@ public class DfdService(
             await dfdElementService.CreateOrUpdateAsync(dfdId, elementDto);
         }
 
+        await context.SaveChangesAsync();
+
         foreach (var dataFlowDto in dto.DataFlows)
         {
-            await dataFlowService.CreateOrUpdateDataFlow(dataFlowDto);
+            await dataFlowService.CreateOrUpdateDataFlow(dataFlowDto, dfdId);
         }
         await context.SaveChangesAsync();
         

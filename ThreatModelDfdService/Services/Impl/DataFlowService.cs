@@ -11,7 +11,7 @@ public class DataFlowService(
     MSSQLContext context
 )
 {
-    public async Task CreateOrUpdateDataFlow(DataFlowRequestDTO dto)
+    public async Task CreateOrUpdateDataFlow(DataFlowRequestDTO dto, long DfdId)
     {
         long? sourceElementId = null;
         long? targetElementId = null;
@@ -47,7 +47,8 @@ public class DataFlowService(
                 SourceElementId = sourceElementId,
                 TargetElementId = targetElementId,
                 SourcePosition = dto.SourcePosition,
-                TargetPosition = dto.TargetPosition
+                TargetPosition = dto.TargetPosition,
+                DfdId = DfdId
             };
             await dataFlowRepository.CreateAsync(newDataFlow);
         }
