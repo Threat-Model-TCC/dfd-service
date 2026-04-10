@@ -6,7 +6,8 @@ import ReactFlow, {
   MiniMap,
   useNodesState,
   useEdgesState,
-  Panel
+  Panel,
+  MarkerType // 1. Importação obrigatória para a seta
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { BASE_URL } from '../../constants/api';
@@ -30,7 +31,24 @@ export default function DfdCanvas({
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
 
-  const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  // 2. FORÇANDO a seta diretamente no momento em que os nós se conectam
+  const onConnect = useCallback((params) => {
+    const edgeWithArrow = {
+      ...params,
+      markerEnd: {
+        type: MarkerType.ArrowClosed, // Define a ponta como seta
+        width: 20,
+        height: 20,
+        color: '#FF0000', // Vermelho para teste
+      },
+      style: {
+        strokeWidth: 2,
+        stroke: '#FF0000', // Vermelho para teste
+      },
+    };
+    
+    setEdges((eds) => addEdge(edgeWithArrow, eds));
+  }, [setEdges]);
 
   // Função para lidar com a exclusão de elementos
   const onNodesDelete = useCallback(async (deletedNodes) => {
@@ -155,7 +173,6 @@ export default function DfdCanvas({
   const saveAll = async () => {
     setStatus("Saving changes...");
 
-    // 1. Mapeamos os elementos no formato esperado, agora incluindo o UUID
     const mappedElements = nodes.map(node => ({
       id: node.id.startsWith('temp_') ? 0 : parseInt(node.id),
       name: node.data.label,
@@ -164,10 +181,10 @@ export default function DfdCanvas({
       yValue: node.position.y,
       width: parseFloat(node.style?.width) || 150,
       height: parseFloat(node.style?.height) || 80,
-      uuid: node.data.uuid // <-- UUID sendo enviado para o backend
+      uuid: node.data.uuid
     }));
 
-    // 2. Montamos o novo payload com a estrutura de objeto e a lista dataFlows vazia
+
     const payload = {
       elements: mappedElements,
       dataFlows: []
