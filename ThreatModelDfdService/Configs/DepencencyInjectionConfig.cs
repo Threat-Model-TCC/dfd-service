@@ -20,6 +20,7 @@ public static class DepencencyInjectionConfig
         services.AddScoped<DfdElementService>();
         services.AddScoped<DfdService>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<DataFlowService>();
 
         return services;
     }

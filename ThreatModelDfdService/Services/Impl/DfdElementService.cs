@@ -50,6 +50,7 @@ public class DfdElementService(
         newEntity.Width = dto.Width;
         newEntity.Height = dto.Height;
         newEntity.Type = dto.Type;
+        newEntity.UuidIdentifier = dto.Uuid;
 
         await dfdElementRepository.CreateAsync(newEntity);
     }
@@ -63,6 +64,13 @@ public class DfdElementService(
     public DfdElement GetById(long id)
     {
         DfdElement dbElement = dfdElementRepository.FindById(id);
+        ValidateDfdElementExists(dbElement);
+        return dbElement;
+    }
+
+    public DfdElement GetByUUID(string uuid)
+    {
+        DfdElement dbElement = _context.DfdElements.FirstOrDefault(e => e.UuidIdentifier == uuid);
         ValidateDfdElementExists(dbElement);
         return dbElement;
     }

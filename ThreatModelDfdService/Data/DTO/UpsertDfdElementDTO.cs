@@ -9,5 +9,6 @@ public record UpsertDfdElementDTO (
     decimal XValue,
     decimal YValue,
     decimal Width,
-    decimal Height
+    decimal Height,
+    string Uuid
 );
