@@ -40,7 +40,13 @@ public class DfdService(
         process.DfdChildId = childDfd.Id;
         context.SaveChanges();
 
-        return new DfdDTO(childDfd.Id, childDfd.DfdParentId, childDfd.LevelNumber, []);
+        return new DfdDTO(
+            childDfd.Id,
+            childDfd.DfdParentId,
+            childDfd.LevelNumber,
+            [],
+            []
+        );
     }
 
     public Dfd Create(int LevelNumber, long projectId, long? dfdParentId = null)
@@ -57,7 +63,8 @@ public class DfdService(
     public DfdDTO GetDfdById(long id)
     {
         Dfd dfd = FindById(id);
-        return new DfdDTO(dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id));
+        return new DfdDTO(
+            dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id), dataFlowService.GetDataFlowsByDfdId(id));
     }
 
     public Dfd FindById(long id)
