@@ -184,6 +184,7 @@ export default function DfdCanvas({
       uuid: node.data.uuid
     }));
 
+
     const payload = {
       elements: mappedElements,
       dataFlows: []
