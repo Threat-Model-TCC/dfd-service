@@ -6,9 +6,9 @@ Este projeto consiste em uma API desenvolvida em React (front-end), .NET 10 (bac
 
 ### Observação importante sobre essa versão
 
-No momento, a persistência dos fluxos de dados (setas) não está implementada. Dessa forma, setas não serão salvas na modelagem de um diagrama.
+No momento, a remoção de um fluxo de dados (seta) salvo não está implementada. Dessa forma, não é possível remover setas salvas na modelagem de um diagrama.
 
-Na próxima história de usuário esperamos resolver essa pendência e finalizar essa funcionalidade.
+Nas próximas sprints esperamos resolver essa pendência e finalizar essa funcionalidade.
 
 # 1. Instruções para Execução do Projeto
 
