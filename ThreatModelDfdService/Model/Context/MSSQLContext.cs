@@ -17,6 +17,7 @@ public class MSSQLContext : DbContext
     public DbSet<DataStore> DataStores { get; set; }
     public DbSet<Dfd> Dfds { get; set; }
     public DbSet<Project> Projects { get; set; }
+    public DbSet<DataFlow> DataFlows { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

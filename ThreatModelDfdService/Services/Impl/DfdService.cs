@@ -4,16 +4,30 @@ using ThreatModelDfdService.Model.Entity;
 
 namespace ThreatModelDfdService.Services.Impl;
 
-public class DfdService(DfdElementService dfdElementService, MSSQLContext context)
+public class DfdService(
+    DfdElementService dfdElementService,
+    DataFlowService dataFlowService,
+    MSSQLContext context)
 {
-    public async Task<List<DfdElementResponseDTO>> SyncElementsAsync(long dfdId, List<UpsertDfdElementDTO> dtos)
+    public async Task<FullDfdResponseDTO> SyncElementsAsync(long dfdId, UpsertAllDfdElementsDTO dto)
     {
-        foreach (var dto in dtos)
+        foreach (var elementDto in dto.Elements)
         {
-            await dfdElementService.CreateOrUpdateAsync(dfdId, dto);
+            await dfdElementService.CreateOrUpdateAsync(dfdId, elementDto);
+        }
+
+        await context.SaveChangesAsync();
+
+        foreach (var dataFlowDto in dto.DataFlows)
+        {
+            await dataFlowService.CreateOrUpdateDataFlow(dataFlowDto, dfdId);
         }
         await context.SaveChangesAsync();
-        return dfdElementService.GetDfdElementsByDfdId(dfdId);
+        
+        return new FullDfdResponseDTO(
+            dfdElementService.GetDfdElementsByDfdId(dfdId),
+            dataFlowService.GetDataFlowsByDfdId(dfdId)
+        );
     }
 
     public DfdDTO CreateChildDfd(CreateDfdChildDTO dto)
@@ -26,7 +40,13 @@ public class DfdService(DfdElementService dfdElementService, MSSQLContext contex
         process.DfdChildId = childDfd.Id;
         context.SaveChanges();
 
-        return new DfdDTO(childDfd.Id, childDfd.DfdParentId, childDfd.LevelNumber, []);
+        return new DfdDTO(
+            childDfd.Id,
+            childDfd.DfdParentId,
+            childDfd.LevelNumber,
+            [],
+            []
+        );
     }
 
     public Dfd Create(int LevelNumber, long projectId, long? dfdParentId = null)
@@ -43,7 +63,8 @@ public class DfdService(DfdElementService dfdElementService, MSSQLContext contex
     public DfdDTO GetDfdById(long id)
     {
         Dfd dfd = FindById(id);
-        return new DfdDTO(dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id));
+        return new DfdDTO(
+            dfd.Id, dfd.DfdParentId, dfd.LevelNumber, dfdElementService.GetDfdElementsByDfdId(id), dataFlowService.GetDataFlowsByDfdId(id));
     }
 
     public Dfd FindById(long id)

@@ -26,7 +26,8 @@ public class DfdElementMapper : IParser<DfdElement, DfdElementResponseDTO>
             origin.YValue,
             origin.Width,
             origin.Height,
-            dfdChildId
+            dfdChildId,
+            origin.UuidIdentifier
         );
     }
 

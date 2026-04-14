@@ -8,5 +8,6 @@ public record CreateDfdElementDTO(
     decimal PositionX,
     decimal PositionY,
     decimal Width,
-    decimal Height
+    decimal Height,
+    string Uuid
 );
