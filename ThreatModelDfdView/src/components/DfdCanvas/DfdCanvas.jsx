@@ -28,7 +28,6 @@ export default function DfdCanvas({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [status, setStatus] = useState("Ready.");
   const [currentDfdData, setCurrentDfdData] = useState(null);
-  const [contextMenu, setContextMenu] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
 
   // 2. FORÇANDO a seta diretamente no momento em que os nós se conectam
@@ -39,11 +38,11 @@ export default function DfdCanvas({
         type: MarkerType.ArrowClosed, // Define a ponta como seta
         width: 20,
         height: 20,
-        color: '#222', 
+        color: '#FF0000', // Vermelho para teste
       },
       style: {
         strokeWidth: 2,
-        stroke: '#222', 
+        stroke: '#FF0000', // Vermelho para teste
       },
     };
     
@@ -76,7 +75,7 @@ export default function DfdCanvas({
     }
 
     setStatus("Decompondo processo...");
-    setContextMenu(null);
+    setSelectedNode(null);
 
     try {
       let dfdData;
@@ -143,12 +142,8 @@ export default function DfdCanvas({
       const response = await fetch(`${BASE_URL}/dfd/${dfdId}`);
       if (response.ok) {
         const data = await response.json();
-        
-        console.log("📥 RECEBIDO DO BACKEND (GET):", data);
-        
         setCurrentDfdData(data);
         
-        // 1. Reconstruir os NÓS (Elements)
         const loadedNodes = data.elements.map(item => ({
           id: item.id.toString(),
           type: 'default',
@@ -163,63 +158,7 @@ export default function DfdCanvas({
         }));
         
         setNodes(loadedNodes);
-
-        // Função auxiliar para converter número do backend de volta para o texto do ReactFlow
-        const getHandleStr = (posInt, defaultHandle) => {
-          switch(posInt) {
-            case 0: return 'top';
-            case 1: return 'right';
-            case 2: return 'bottom';
-            case 3: return 'left';
-            default: return defaultHandle;
-          }
-        };
-
-        // 2. Reconstruir as SETAS (Flows)
-        // Pega o array, não importa se o backend mandou como 'flows' ou 'dataFlows'
-        const incomingFlows = data.flows || data.dataFlows; 
-
-        if (incomingFlows && incomingFlows.length > 0) {
-          const loadedEdges = incomingFlows.map(flow => {
-            const sourceNode = loadedNodes.find(n => n.data.uuid === flow.sourceElementIdentifier);
-            const targetNode = loadedNodes.find(n => n.data.uuid === flow.targetElementIdentifier);
-
-            if (sourceNode && targetNode) {
-              return {
-                id: `flow_${flow.id}`,
-                source: sourceNode.id,
-                target: targetNode.id,
-                // Injetando a regra dos conectores de acordo com os números salvos
-                sourceHandle: getHandleStr(flow.sourcePosition, 'bottom'),
-                targetHandle: getHandleStr(flow.targetPosition, 'top'),
-                // Forçando o estilo e a ponta da seta novamente
-                markerEnd: {
-                  type: MarkerType.ArrowClosed,
-                  width: 20,
-                  height: 20,
-                  color: '#222', 
-                },
-                style: {
-                  strokeWidth: 2,
-                  stroke: '#222', 
-                },
-                data: { 
-                  backendId: flow.id,
-                  name: flow.name,
-                  description: flow.description
-                }
-              };
-            } else {
-              console.warn(`Não foi possível conectar a seta ${flow.id}. Nós não encontrados.`);
-              return null;
-            }
-          }).filter(edge => edge !== null);
-
-          setEdges(loadedEdges);
-        } else {
-          setEdges([]); 
-        }
-
+        setEdges([]); 
         setStatus(`Loaded ${data.elements.length} elements. Level: ${data.levelNumber}`);
       } else {
         setStatus(`Error loading: ${response.status}`);
@@ -244,38 +183,11 @@ export default function DfdCanvas({
       uuid: node.data.uuid
     }));
 
-    // Função auxiliar para converter o nome do conector em número para o Backend
-    const getPosInt = (handleId, defaultPos) => {
-      if (!handleId) return defaultPos;
-      if (handleId.includes('top')) return 0;
-      if (handleId.includes('right')) return 1;
-      if (handleId.includes('bottom')) return 2;
-      if (handleId.includes('left')) return 3;
-      return defaultPos;
-    };
-
-    const mappedDataFlows = edges.map(edge => {
-      const sourceNode = nodes.find(n => n.id === edge.source);
-      const targetNode = nodes.find(n => n.id === edge.target);
-
-      return {
-        id: edge.data?.backendId || 0,
-        name: edge.data?.name || "Novo Fluxo",
-        description: edge.data?.description || "",
-        sourceElementIdentifier: sourceNode ? sourceNode.data.uuid : "",
-        targetElementIdentifier: targetNode ? targetNode.data.uuid : "",
-        // Salvando: Origem = Bottom (2) | Destino = Top (0)
-        sourcePosition: getPosInt(edge.sourceHandle, 2), 
-        targetPosition: getPosInt(edge.targetHandle, 0)
-      };
-    }).filter(flow => flow.sourceElementIdentifier && flow.targetElementIdentifier);
 
     const payload = {
       elements: mappedElements,
-      dataFlows: mappedDataFlows
+      dataFlows: []
     };
-
-    console.log("📤 ENVIANDO PARA O BACKEND (PUT):", payload);
 
     try {
       const response = await fetch(`${BASE_URL}/dfd/${dfdId}/elements`, {
@@ -296,17 +208,13 @@ export default function DfdCanvas({
     }
   };
 
-  const onNodeContextMenu = useCallback((e, node) => {
-    e.preventDefault();
-    if (node.data.type === DFD_TYPES.PROCESS) {
-      setSelectedNode(node);
-      setContextMenu({ x: e.clientX, y: e.clientY });
-    }
+  const onNodeClick = useCallback((e, node) => {
+    setSelectedNode(node);
   }, []);
 
-  const handleCanvasClick = () => {
-    setContextMenu(null);
-  };
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+  }, []);
 
   useEffect(() => { loadData(); }, [dfdId]);
 
@@ -318,7 +226,7 @@ export default function DfdCanvas({
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh' }} onClick={handleCanvasClick}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -326,7 +234,8 @@ export default function DfdCanvas({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDoubleClick={onNodeDoubleClick}
-        onNodeContextMenu={onNodeContextMenu}
+        onNodeClick={onNodeClick} // <-- Adicionado: seleciona o nó
+        onPaneClick={onPaneClick} // <-- Adicionado: limpa a seleção ao clicar fora
         onNodesDelete={onNodesDelete}
         fitView
       >
@@ -356,44 +265,32 @@ export default function DfdCanvas({
 
             <button style={{...styles.button, ...styles.btnLoad}} onClick={loadData}>📂 Load DB</button>
             <button style={{...styles.button, ...styles.btnSave}} onClick={saveAll}>💾 Save</button>
+
+            {/* --- NOVO BOTÃO CONTEXTUAL DE DECOMPOSIÇÃO --- */}
+            {selectedNode && selectedNode.data.type === DFD_TYPES.PROCESS && (
+              <>
+                <div style={{width: '1px', height: '20px', background: '#ccc', margin: '0 5px'}}></div>
+                <button 
+                  style={{
+                    ...styles.button, 
+                    backgroundColor: '#4CAF50', 
+                    color: 'white', 
+                    fontWeight: 'bold',
+                    boxShadow: '0 0 5px rgba(76, 175, 80, 0.5)'
+                  }} 
+                  onClick={() => handleDecompose(selectedNode)}
+                  title={`Decompor o processo: ${selectedNode.data.label}`}
+                >
+                  🔍 Decompor Processo
+                </button>
+              </>
+            )}
+
             <div style={styles.status}>{status} (DFD ID: {dfdId} | Level: {levelNumber})</div>
           </div>
         </Panel>
 
-        {contextMenu && selectedNode && (
-          <div
-            style={{
-              position: 'fixed',
-              left: contextMenu.x,
-              top: contextMenu.y,
-              backgroundColor: '#fff',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              zIndex: 1000,
-              padding: 0
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => handleDecompose(selectedNode)}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '10px 15px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '14px'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-            >
-              🔍 Decompor
-            </button>
-          </div>
-        )}
+        {/* Repare que deletamos aquele bloco de código {contextMenu && selectedNode && ( ... )} daqui! */}
 
         <Controls />
         <MiniMap />
