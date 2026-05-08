@@ -342,21 +342,29 @@ export default function DfdCanvas({
             <button style={{...styles.button, ...styles.btnSave}} onClick={saveAll}>💾 Save</button>
 
             {/* --- NOVO BOTÃO CONTEXTUAL DE DECOMPOSIÇÃO --- */}
+            {/* --- NOVO BOTÃO CONTEXTUAL DE DECOMPOSIÇÃO --- */}
             {selectedNode && selectedNode.data.type === DFD_TYPES.PROCESS && (
               <>
                 <div style={{width: '1px', height: '20px', background: '#ccc', margin: '0 5px'}}></div>
                 <button 
                   style={{
                     ...styles.button, 
-                    backgroundColor: '#4CAF50', 
+                    backgroundColor: selectedNode.id.startsWith('temp_') ? '#9e9e9e' : '#4CAF50', 
                     color: 'white', 
                     fontWeight: 'bold',
-                    boxShadow: '0 0 5px rgba(76, 175, 80, 0.5)'
+                    cursor: selectedNode.id.startsWith('temp_') ? 'not-allowed' : 'pointer',
+                    boxShadow: selectedNode.id.startsWith('temp_') ? 'none' : '0 0 5px rgba(76, 175, 80, 0.5)'
                   }} 
-                  onClick={() => handleDecompose(selectedNode)}
-                  title={`Decompor o processo: ${selectedNode.data.label}`}
+                  onClick={() => {
+                    if (selectedNode.id.startsWith('temp_')) {
+                      setStatus("⚠️ Salve o diagrama (Save) antes de decompor um novo processo!");
+                      return;
+                    }
+                    handleDecompose(selectedNode);
+                  }}
+                  title={selectedNode.id.startsWith('temp_') ? "Salve no banco antes de decompor" : `Decompor o processo: ${selectedNode.data.label}`}
                 >
-                  🔍 Decompor Processo
+                  🔍 {selectedNode.id.startsWith('temp_') ? "Salve para Decompor" : "Decompor Processo"}
                 </button>
               </>
             )}
