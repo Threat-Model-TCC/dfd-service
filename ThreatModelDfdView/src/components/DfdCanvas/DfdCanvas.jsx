@@ -38,11 +38,11 @@ export default function DfdCanvas({
         type: MarkerType.ArrowClosed, // Define a ponta como seta
         width: 20,
         height: 20,
-        color: '#FF0000', // Vermelho para teste
+        color: '#000000',
       },
       style: {
         strokeWidth: 2,
-        stroke: '#FF0000', // Vermelho para teste
+        stroke: '#000000', 
       },
     };
     
@@ -158,7 +158,57 @@ export default function DfdCanvas({
         }));
         
         setNodes(loadedNodes);
-        setEdges([]); 
+
+        // Conversor reverso para desenhar as setas na tela
+        const getHandleStr = (posInt, defaultHandle) => {
+          switch(posInt) {
+            case 0: return 'top';
+            case 1: return 'right';
+            case 2: return 'bottom';
+            case 3: return 'left';
+            default: return defaultHandle;
+          }
+        };
+
+        const incomingFlows = data.flows || data.dataFlows; 
+
+        if (incomingFlows && incomingFlows.length > 0) {
+          const loadedEdges = incomingFlows.map(flow => {
+            const sourceNode = loadedNodes.find(n => n.data.uuid === flow.sourceElementIdentifier);
+            const targetNode = loadedNodes.find(n => n.data.uuid === flow.targetElementIdentifier);
+
+            if (sourceNode && targetNode) {
+              return {
+                id: `flow_${flow.id}`,
+                source: sourceNode.id,
+                target: targetNode.id,
+                sourceHandle: getHandleStr(flow.sourcePosition, 'bottom'),
+                targetHandle: getHandleStr(flow.targetPosition, 'top'),
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  width: 20,
+                  height: 20,
+                  color: '#000000', 
+                },
+                style: {
+                  strokeWidth: 2,
+                  stroke: '#000000', 
+                },
+                data: { 
+                  backendId: flow.id,
+                  name: flow.name,
+                  description: flow.description
+                }
+              };
+            }
+            return null;
+          }).filter(edge => edge !== null);
+
+          setEdges(loadedEdges);
+        } else {
+          setEdges([]); 
+        }
+
         setStatus(`Loaded ${data.elements.length} elements. Level: ${data.levelNumber}`);
       } else {
         setStatus(`Error loading: ${response.status}`);
@@ -183,10 +233,35 @@ export default function DfdCanvas({
       uuid: node.data.uuid
     }));
 
+    // Função auxiliar para mapear posição das setas
+    const getPosInt = (handleId, defaultPos) => {
+      if (!handleId) return defaultPos;
+      if (handleId.includes('top')) return 0;
+      if (handleId.includes('right')) return 1;
+      if (handleId.includes('bottom')) return 2;
+      if (handleId.includes('left')) return 3;
+      return defaultPos;
+    };
+
+    // Mapeando as setas para o Backend
+    const mappedDataFlows = edges.map(edge => {
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      const targetNode = nodes.find(n => n.id === edge.target);
+
+      return {
+        id: edge.data?.backendId || 0,
+        name: edge.data?.name || "Novo Fluxo",
+        description: edge.data?.description || "",
+        sourceElementIdentifier: sourceNode ? sourceNode.data.uuid : "",
+        targetElementIdentifier: targetNode ? targetNode.data.uuid : "",
+        sourcePosition: getPosInt(edge.sourceHandle, 2), 
+        targetPosition: getPosInt(edge.targetHandle, 0)
+      };
+    }).filter(flow => flow.sourceElementIdentifier && flow.targetElementIdentifier);
 
     const payload = {
       elements: mappedElements,
-      dataFlows: []
+      dataFlows: mappedDataFlows // <-- Agora enviando as setas corretamente!
     };
 
     try {
