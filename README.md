@@ -73,3 +73,82 @@ A interface de documentação e testes da API é provida pelo Swagger (OpenAPI),
 Para acessar o banco de dados rode o comando:
 
     docker exec -it sql2022_db /opt/mssql-tools18/bin/sqlcmd    -S localhost -U sa -P 'SuaSenhaForte123!' -d dfd_db -C
+
+# 4. Usabilidade
+
+Esta seção descreve como interagir com a ferramenta e utilizar suas principais funcionalidades para modelagem de Diagramas de Fluxo de Dados (DFD).
+
+---
+
+## 4.1. Tela de Projetos
+
+A tela de projetos é a interface inicial da aplicação. Nela, o usuário pode:
+
+- Visualizar projetos existentes;
+- Criar novos projetos;
+- Editar informações de projetos;
+- Excluir projetos.
+
+![Tela de Projetos](assets/images/projects-page.png)
+
+Ao acessar um projeto, o usuário é automaticamente redirecionado para o canvas contendo o DFD de nível 0 (diagrama de contexto).
+
+---
+
+## 4.2. Tela do Canvas
+
+A tela do canvas é responsável pela modelagem dos diagramas DFD.
+
+### 4.2.1. Criação de Elementos
+
+Para criar um elemento (`Actor`, `Process` ou `DataStore`), basta selecionar o tipo desejado. O elemento será automaticamente adicionado ao canvas e será solicitado um nome para identificá-lo.
+
+![Criar elemento](assets/images/create-element.png)
+
+---
+
+### 4.2.2. Remoção de Elementos
+
+Para remover um elemento do diagrama, clique sobre ele e pressione a tecla `Backspace` do teclado.
+
+![Apagar elemento](assets/images/element-removal.png)
+
+---
+
+### 4.2.3. Criação de Fluxos de Dados (Setas)
+
+Para criar um fluxo de dados entre dois elementos, clique no ponto de conexão do elemento de origem e arraste o mouse até o ponto de conexão do elemento de destino.
+
+![Apagar elemento](assets/images/data-flow.png)
+
+---
+
+### 4.2.4. Salvamento das Alterações no Canvas
+
+As alterações realizadas no canvas somente são persistidas no banco de dados ao clicar no botão `Save to DB`.
+
+Esse botão é responsável por salvar o estado atual do diagrama.
+
+![Salvar canva](assets/images/save-canva.png)
+
+---
+
+### 4.2.5. Acesso ao Próximo Nível do DFD
+
+Ao clicar em um elemento do tipo `Process`, será exibida a opção `Decompose`. Ao selecioná-la, o usuário será redirecionado para o próximo nível do diagrama, permitindo detalhar o processo selecionado.
+
+![Decompor processo](assets/images/decompose-process.png)
+
+> **Observação importante:** somente é possível decompor um processo caso o DFD atual já tenha sido salvo.
+
+---
+
+### 4.2.6. Retorno ao Nível Anterior do DFD
+
+Quando o usuário estiver em um diagrama diferente do nível 0 (contexto), será exibido o botão `Return to Previous Level`.
+
+Ao clicar nesse botão, o usuário será redirecionado ao diagrama anterior.
+
+![Nível anterior](assets/images/last-level.png)
+
+> **Observação importante:** somente é possível retornar ao nível anterior caso o DFD atual esteja salvo.
