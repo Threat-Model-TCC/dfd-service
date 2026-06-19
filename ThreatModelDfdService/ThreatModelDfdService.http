@@ -1,6 +1,0 @@
-@ThreatModelDfdService_HostAddress = http://localhost:5019
-
-GET {{ThreatModelDfdService_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
