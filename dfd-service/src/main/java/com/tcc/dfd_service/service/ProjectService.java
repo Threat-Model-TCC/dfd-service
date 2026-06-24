@@ -46,6 +46,7 @@ public class ProjectService {
 
     public PagedProjectResponseDTO getPagedProjects(Integer page, Integer size) {
         if(page == null) page = 0;
+        if(page != 0) page = page - 1;
         if(size == null) size = 15;
         Pageable pageable = PageRequest.of(page,size, Sort.by("createdAt").descending());
 
