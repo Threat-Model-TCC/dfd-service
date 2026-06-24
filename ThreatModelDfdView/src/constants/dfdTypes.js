@@ -1,5 +1,5 @@
 export const DFD_TYPES = {
-  PROCESS: 'Process',
-  ACTOR: 'Actor',
-  DATA_STORE: 'DataStore'
+  PROCESS: 'PROCESS',
+  ACTOR: 'ACTOR',
+  DATA_STORE: 'DATA_STORE'
 };
