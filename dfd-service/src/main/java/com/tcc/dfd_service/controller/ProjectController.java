@@ -32,7 +32,7 @@ public class ProjectController {
 
     @GetMapping
     public ResponseEntity<PagedProjectResponseDTO> getPagedProjects(
-            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         return ResponseEntity.ok(projectService.getPagedProjects(page, size));
     }

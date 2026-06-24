@@ -12,7 +12,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Dfd extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name = "level_number")
     private Integer levelNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

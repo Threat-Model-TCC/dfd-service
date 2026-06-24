@@ -20,10 +20,9 @@ public class Project extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "context_diagram_id", nullable = false)
-    private Dfd contextDiagram;
+    @Column(name = "context_diagram_id")
+    private Long contextDiagramId;
 
-    @Column(nullable = false)
+    @Column(name = "created_at")
     private OffsetDateTime createdAt;
 }

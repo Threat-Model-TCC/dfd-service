@@ -27,7 +27,7 @@ public class ProjectService {
 
         Dfd contextDiagram = dfdService.create(0, project.getId(), null);
 
-        project.setContextDiagram(contextDiagram);
+        project.setContextDiagramId(contextDiagram.getId());
 
         project = projectRepository.save(project);
         return toResponse(project);
@@ -98,9 +98,7 @@ public class ProjectService {
                 project.getId(),
                 project.getTitle(),
                 project.getDescription(),
-                project.getContextDiagram() != null
-                        ? project.getContextDiagram().getId()
-                        : null,
+                project.getContextDiagramId(),
                 project.getCreatedAt()
         );
     }
