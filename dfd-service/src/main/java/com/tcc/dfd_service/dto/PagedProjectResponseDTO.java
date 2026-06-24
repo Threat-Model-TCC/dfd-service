@@ -5,5 +5,5 @@ import java.util.List;
 public record PagedProjectResponseDTO(
         Integer current,
         Integer pages,
-        List<ProjectResponseDTO> items
+        List<ProjectResponseDTO> projects
 ) {}

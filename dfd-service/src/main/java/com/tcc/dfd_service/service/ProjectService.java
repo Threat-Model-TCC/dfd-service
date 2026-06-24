@@ -27,7 +27,7 @@ public class ProjectService {
 
         Dfd contextDiagram = dfdService.create(0, project.getId(), null);
 
-        project.setContextDiagram(contextDiagram);
+        project.setContextDiagramId(contextDiagram.getId());
 
         project = projectRepository.save(project);
         return toResponse(project);
@@ -46,6 +46,7 @@ public class ProjectService {
 
     public PagedProjectResponseDTO getPagedProjects(Integer page, Integer size) {
         if(page == null) page = 0;
+        if(page != 0) page = page - 1;
         if(size == null) size = 15;
         Pageable pageable = PageRequest.of(page,size, Sort.by("createdAt").descending());
 
@@ -98,9 +99,7 @@ public class ProjectService {
                 project.getId(),
                 project.getTitle(),
                 project.getDescription(),
-                project.getContextDiagram() != null
-                        ? project.getContextDiagram().getId()
-                        : null,
+                project.getContextDiagramId(),
                 project.getCreatedAt()
         );
     }

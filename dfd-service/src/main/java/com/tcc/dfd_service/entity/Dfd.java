@@ -6,13 +6,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "dfd")
+@Table(name = "dfds")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Dfd extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name = "level_number")
     private Integer levelNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)

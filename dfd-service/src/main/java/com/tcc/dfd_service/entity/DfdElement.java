@@ -10,7 +10,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "dfd_element")
+@Table(name = "dfd_elements")
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
