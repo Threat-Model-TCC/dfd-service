@@ -1,0 +1,33 @@
+server:
+  port: 9191
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+spring:
+  application:
+    name: API-GATEWAY
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes[0]:
+            id: DFD-SERVICE
+            uri: lb://DFD-SERVICE
+            predicates: Path=/**
+
+logging:
+  level:
+    org:
+      springframework:
+        cloud:
+          gateway: DEBUG

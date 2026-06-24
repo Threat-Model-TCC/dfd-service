@@ -1,67 +1,91 @@
 version: '3.8'
 
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql2022_db
+  # ----------------------------------------
+  # Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
     ports:
-      - "1445:1433"
+      - "5433:5432"
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=SuaSenhaForte123!
-      - MSSQL_PID=Developer
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dfd_db
     volumes:
-      - sql_data:/var/opt/mssql
+      - postgres_data:/var/lib/postgresql/data
     restart: always
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "SuaSenhaForte123!", "-C", "-Q", "SELECT 1"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dfd_db"]
       interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  sqlserver-setup:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql_setup
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    command:
-      - /bin/bash
-      - -c
-      - |
-        echo "SQL Server pronto! Criando banco dfd_db..."
-        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P 'SuaSenhaForte123!' -C -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'dfd_db') CREATE DATABASE dfd_db;"
-        echo "Banco dfd_db criado com sucesso!"
-
-  backend:
+  # ----------------------------------------
+  # Spring Cloud Infrastructure
+  # ----------------------------------------
+  service-registry:
     build:
-      context: ./ThreatModelDfdService
+      context: ./service-registry # Substitua pelo caminho real da pasta do Eureka
       dockerfile: Dockerfile
-    container_name: dfd_backend
+    container_name: service_registry
     ports:
-      - "5000:8080"
+      - "8761:8761" # Porta padrão do painel do Eureka (opcional para visualização local)
+    restart: always
+
+  api-gateway:
+    build:
+      context: ./api-gateway # Substitua pelo caminho real da pasta do Gateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    ports:
+      - "5000:9191" # Mapeia a 5000 da sua máquina para a porta interna do Gateway (geralmente 8080 no Spring)
     depends_on:
-      sqlserver:
-        condition: service_healthy
+      - service-registry
     restart: always
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - MSSQLServerConnection__MSSQLServerConnectionString=Data Source=sqlserver,1433;Initial Catalog=dfd_db;User Id=sa;Password=SuaSenhaForte123!;Encrypt=True;TrustServerCertificate=True;
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
 
+  # ----------------------------------------
+  # Domain Services
+  # ----------------------------------------
+  dfd-service:
+    build:
+      context: ./dfd-service # Substitua pelo caminho real da pasta do microsserviço
+      dockerfile: Dockerfile
+    container_name: dfd_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    restart: always
+    environment:
+      # Conexão com o Postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dfd_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update # ou validate, dependendo da sua estratégia
+      # Registro no Eureka
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+
+  # ----------------------------------------
+  # Frontend
+  # ----------------------------------------
   frontend:
     build:
       context: ./ThreatModelDfdView
       dockerfile: Dockerfile
-      # Variável que passamos para o Vite na hora de construir a imagem
       args:
         VITE_API_URL: "http://localhost:5000"
     container_name: dfd_frontend
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - api-gateway
     restart: always
 
 volumes:
-  sql_data:
+  postgres_data:

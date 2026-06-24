@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: DFD-SERVICE
+
+  # DATABASE
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dfd_db
+    username: postgres
+    password: postgres
+
+server:
+  port: 8081
+
+# EUREKA
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    urls-primary-name: gateway-service
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
