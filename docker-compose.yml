@@ -1,20 +1,24 @@
 version: '3.8'
 
 services:
+  # =========================================================================
+  # DATABASES
+  # =========================================================================
+  
   # ----------------------------------------
-  # Database
+  # Database do dfd-service
   # ----------------------------------------
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres_db
+  dfd-db:
+    image: postgres:17-alpine
+    container_name: dfd_db
     ports:
-      - "5433:5432"
+      - "5433:5432"  # Porta diferente para não conflitar
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=dfd_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - dfd_postgres_data:/var/lib/postgresql/data
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d dfd_db"]
@@ -24,53 +28,126 @@ services:
       start_period: 10s
 
   # ----------------------------------------
-  # Spring Cloud Infrastructure
+  # Database do auth-service
+  # ----------------------------------------
+  auth-db:
+    image: postgres:17-alpine
+    container_name: auth_db
+    ports:
+      - "5434:5432"  # Porta diferente para não conflitar
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=auth_db
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =========================================================================
+  # SPRING CLOUD INFRASTRUCTURE
+  # =========================================================================
+  
+  # ----------------------------------------
+  # Service Registry (Eureka)
   # ----------------------------------------
   service-registry:
     build:
-      context: ./service-registry # Substitua pelo caminho real da pasta do Eureka
+      context: ./service-registry
       dockerfile: Dockerfile
     container_name: service_registry
     ports:
-      - "8761:8761" # Porta padrão do painel do Eureka (opcional para visualização local)
+      - "8761:8761"
     restart: always
 
+  # ----------------------------------------
+  # API Gateway
+  # ----------------------------------------
   api-gateway:
     build:
-      context: ./api-gateway # Substitua pelo caminho real da pasta do Gateway
+      context: ./api-gateway
       dockerfile: Dockerfile
     container_name: api_gateway
     ports:
-      - "5000:9191" # Mapeia a 5000 da sua máquina para a porta interna do Gateway (geralmente 8080 no Spring)
+      - "5000:9191"
     depends_on:
       - service-registry
     restart: always
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
 
+  # =========================================================================
+  # MICROSSERVIÇOS
+  # =========================================================================
+  
   # ----------------------------------------
-  # Domain Services
+  # dfd-service
   # ----------------------------------------
   dfd-service:
     build:
-      context: ./dfd-service # Substitua pelo caminho real da pasta do microsserviço
+      context: ./dfd-service
       dockerfile: Dockerfile
     container_name: dfd_service
     depends_on:
-      postgres:
+      dfd-db:
         condition: service_healthy
       service-registry:
         condition: service_started
     restart: always
     environment:
-      # Conexão com o Postgres
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dfd_db
+      # Configuração do banco de dados
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://dfd-db:5432/dfd_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update # ou validate, dependendo da sua estratégia
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      
       # Registro no Eureka
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      
+      # Configuração do serviço
+      - SERVER_PORT=8080
 
+  # ----------------------------------------
+  # auth-service (NOVO MICROSSERVIÇO)
+  # ----------------------------------------
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth_service
+    ports:
+      - "8282:8282"  # Mapeia a porta 8282 do contêiner para a máquina host
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    restart: always
+    environment:
+      # Configuração do banco de dados
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-db:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      
+      # Registro no Eureka
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      
+      # Configuração do serviço
+      - SERVER_PORT=8282
+      
+      # JWT Secret (NÃO coloque hardcoded em produção! Use secrets)
+      - JWT_SECRET=${JWT_SECRET:-dGhpcyBpcyBhIDMyIGJ5dGUga2V5IGZvciBqd3QhISE=}
+
+  # =========================================================================
+  # FRONTEND
+  # =========================================================================
+  
   # ----------------------------------------
   # Frontend
   # ----------------------------------------
@@ -87,5 +164,9 @@ services:
       - api-gateway
     restart: always
 
+# =========================================================================
+# VOLUMES
+# =========================================================================
 volumes:
-  postgres_data:
+  dfd_postgres_data:   # Volume para o banco do dfd-service
+  auth_postgres_data:  # Volume para o banco do auth-service
