@@ -24,8 +24,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         request ->
                                 request
+                                        .requestMatchers(
+                                                "/swagger-ui/**",
+                                                "/swagger-ui.html",
+                                                "/v3/api-docs/**",
+                                                "/v3/api-docs",
+                                                "/swagger-resources/**",
+                                                "/webjars/**"
+                                        )
+                                        .permitAll()
+
                                         .requestMatchers("/**")
-                                        .permitAll());
+                                        .authenticated());
         http.formLogin(Customizer.withDefaults());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
