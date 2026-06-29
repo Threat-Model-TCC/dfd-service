@@ -1,4 +1,4 @@
-package com.tcc.dfd_service;
+package com.tcc.dfd_service.security;
 
 import com.tcc.dfd_service.service.JwtService;
 import com.tcc.dfd_service.vo.JwtToken;
