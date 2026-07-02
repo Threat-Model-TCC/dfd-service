@@ -2,6 +2,7 @@ package com.microdfd.auth_service.service;
 
 import com.microdfd.auth_service.dto.TokensDTO;
 import com.microdfd.auth_service.enums.JwtTokenType;
+import com.microdfd.auth_service.enums.UserRole;
 import com.microdfd.auth_service.vo.JwtToken;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -61,6 +62,8 @@ public class JwtService {
 
     private final String TOKEN_TYPE_CLAIM = "token-type";
 
+    private final String AUTHORITY_CLAIM = "authority";
+
     public String extractUsername(JwtToken jwtToken) {
         return Jwts.parser()
                 .verifyWith(getSignInPublicKey())
@@ -99,13 +102,13 @@ public class JwtService {
         return JwtTokenType.valueOf(type);
     }
 
-    public TokensDTO generateTokens(String username) {
+    public TokensDTO generateTokens(String username, UserRole role) {
         if(username == null || username.isEmpty()) {
             throw new IllegalArgumentException("Username cannot be null or empty");
         }
 
-        JwtToken accessToken = generateToken(username, JwtTokenType.ACCESS, JWT_ACCESS_EXPIRATION);
-        JwtToken refreshToken = generateToken(username, JwtTokenType.REFRESH, JWT_REFRESH_EXPIRATION);
+        JwtToken accessToken = generateToken(username, role, JwtTokenType.ACCESS, JWT_ACCESS_EXPIRATION);
+        JwtToken refreshToken = generateToken(username, role, JwtTokenType.REFRESH, JWT_REFRESH_EXPIRATION);
 
         return new TokensDTO(
                 accessToken.getValueWithBearer(),
@@ -113,11 +116,12 @@ public class JwtService {
         );
     }
 
-    private JwtToken generateToken(String username, JwtTokenType tokenType, Long msExpiration) {
+    private JwtToken generateToken(String username, UserRole role, JwtTokenType tokenType, Long msExpiration) {
         return new JwtToken(
                 Jwts.builder()
                         .subject(username)
                         .claim(TOKEN_TYPE_CLAIM, tokenType)
+                        .claim(AUTHORITY_CLAIM, role)
                         .issuedAt(new Date())
                         .issuer(ISSUER)
                         .expiration(new Date(System.currentTimeMillis() + msExpiration))
@@ -129,7 +133,8 @@ public class JwtService {
     private PrivateKey getSignInPrivateKey() {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            byte[] privateKeyBytes = Decoders.BASE64.decode(JWT_PRIVATE_KEY);
+            String cleanPrivateKey = JWT_PRIVATE_KEY.replaceAll("\\s+", "");
+            byte[] privateKeyBytes = Decoders.BASE64.decode(cleanPrivateKey);
             return keyFactory.generatePrivate(new PKCS8EncodedKeySpec(privateKeyBytes));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -139,7 +144,8 @@ public class JwtService {
     private PublicKey getSignInPublicKey() {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            byte[] publicKeyBytes = Decoders.BASE64.decode(JWT_PUBLIC_KEY);
+            String cleanPublicKey = JWT_PUBLIC_KEY.replaceAll("\\s+", "");
+            byte[] publicKeyBytes = Decoders.BASE64.decode(cleanPublicKey);
             return keyFactory.generatePublic(new X509EncodedKeySpec(publicKeyBytes));
         } catch (Exception e) {
             throw new RuntimeException(e);
