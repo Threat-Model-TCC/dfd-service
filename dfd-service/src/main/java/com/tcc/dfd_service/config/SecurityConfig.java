@@ -21,6 +21,8 @@ public class SecurityConfig {
         http
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrfConfig -> csrfConfig.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
                 .authorizeHttpRequests(
                         request ->
                                 request
@@ -36,7 +38,6 @@ public class SecurityConfig {
 
                                         .requestMatchers("/**")
                                         .authenticated());
-        http.formLogin(Customizer.withDefaults());
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
