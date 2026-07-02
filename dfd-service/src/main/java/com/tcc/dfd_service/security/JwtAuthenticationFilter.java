@@ -1,6 +1,6 @@
 package com.tcc.dfd_service.security;
 
-import com.tcc.dfd_service.UserRole;
+import com.tcc.dfd_service.enums.UserRole;
 import com.tcc.dfd_service.service.JwtService;
 import com.tcc.dfd_service.vo.JwtToken;
 import jakarta.servlet.FilterChain;

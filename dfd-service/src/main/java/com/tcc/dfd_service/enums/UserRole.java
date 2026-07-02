@@ -1,4 +1,4 @@
-package com.tcc.dfd_service;
+package com.tcc.dfd_service.enums;
 
 import org.springframework.security.core.GrantedAuthority;
 

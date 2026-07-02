@@ -1,6 +1,6 @@
 package com.tcc.dfd_service.service;
 
-import com.tcc.dfd_service.UserRole;
+import com.tcc.dfd_service.enums.UserRole;
 import com.tcc.dfd_service.enums.JwtTokenType;
 import com.tcc.dfd_service.vo.JwtToken;
 import io.jsonwebtoken.Jwts;
