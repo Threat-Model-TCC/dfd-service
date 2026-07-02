@@ -23,7 +23,13 @@ spring:
           routes[0]:
             id: DFD-SERVICE
             uri: lb://DFD-SERVICE
-            predicates: Path=/**
+            predicates:
+              - Path=/dfd/**, /projects/**
+          routes[1]:
+            id: AUTH-SERVICE
+            uri: lb://AUTH-SERVICE
+            predicates:
+              - Path=/auth/**
 
 logging:
   level:
