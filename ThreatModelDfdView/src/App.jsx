@@ -1,10 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard/Dashboard';
 import DfdCanvas from './components/DfdCanvas/DfdCanvas';
+import Login from './components/Login';
+import { Register } from './components/Register';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('dashboard');
+  // Inicialização inteligente: se houver token, começa no dashboard, senão, no login
+  const [currentScreen, setCurrentScreen] = useState(() => {
+    const token = localStorage.getItem('accessToken');
+    return token ? 'dashboard' : 'login';
+  });
+  
   const [navigationStack, setNavigationStack] = useState([]);
+
+  // Monitora alterações globais de logout (disparadas pelo interceptor do Axios)
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      setCurrentScreen('login');
+      setNavigationStack([]);
+    };
+
+    // Caso precise forçar a atualização de tela ao limpar o localStorage em outras partes
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'accessToken' && !e.newValue) {
+        handleLogoutEvent();
+      }
+    });
+  }, []);
 
   const handleOpenCanvas = (diagramId) => {
     console.log(`Abrindo Canvas para o contextDiagramId: ${diagramId}`);
@@ -22,10 +44,32 @@ export default function App() {
     }
   };
 
+  /* ==========================================
+     RENDERIZAÇÃO CONDICIONAL DAS TELAS
+     ========================================== */
+  
+  if (currentScreen === 'login') {
+    return (
+      <Login 
+        onNavigateToRegister={() => setCurrentScreen('register')} 
+        onLoginSuccess={() => setCurrentScreen('dashboard')} 
+      />
+    );
+  }
+
+  if (currentScreen === 'register') {
+    return (
+      <Register 
+        onNavigateToLogin={() => setCurrentScreen('login')} 
+      />
+    );
+  }
+
   if (currentScreen === 'dashboard') {
     return <Dashboard onOpenProject={handleOpenCanvas} />;
   }
 
+  // Tela padrão: Canvas
   const currentNavigation = navigationStack[navigationStack.length - 1];
   const canReturnToParent = navigationStack.length > 1;
 

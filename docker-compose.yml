@@ -74,7 +74,7 @@ services:
       dockerfile: Dockerfile
     container_name: api_gateway
     ports:
-      - "5000:9191"
+      - "9191:9191"
     depends_on:
       - service-registry
     restart: always
