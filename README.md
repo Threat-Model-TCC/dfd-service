@@ -157,7 +157,7 @@ Ao clicar nesse botão, o usuário será redirecionado ao diagrama anterior.
 
 O sistema foi desenhado em uma arquitetura distribuída e atualmente é composto por 4 serviços principais:
 
-*   **`auth-service`**: Responsável pela gestão de identidades, controle de acesso e autenticação dos usuários de forma segura.
-*   **`dfd-service`**: Domínio principal (Core) da aplicação. Gerencia todo o ciclo de vida dos projetos e as operações relacionadas aos Diagramas de Fluxo de Dados (DFDs).
+*   **`auth-service`**: Responsável pela gestão de identidades, controle de acesso e autenticação dos usuários de forma segura. Possui seu próprio banco de dados **`auth_db`**.
+*   **`dfd-service`**: Domínio principal (Core) da aplicação. Gerencia todo o ciclo de vida dos projetos e as operações relacionadas aos Diagramas de Fluxo de Dados (DFDs). Possui seu próprio banco de dados **`dfd_db`**.
 *   **`api-gateway`**: Atua como o ponto único de entrada (*Single Point of Entry*) do sistema. Ele abstrai a complexidade interna, recebendo as requisições externas e realizando o roteamento reverso para o microsserviço adequado.
 *   **`service-registry`**: Atua como o mecanismo de *Service Discovery*. Mantém o registro dinâmico das instâncias e portas dos microsserviços em execução, permitindo que eles se comuniquem internamente de forma transparente, sem a necessidade de acoplamento a IPs estáticos.
