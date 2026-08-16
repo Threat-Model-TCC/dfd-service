@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -39,6 +38,9 @@ public class User implements UserDetails {
     @Column(name = "password_hash")
     private String passwordHash;
 
+    @Column(name = "google_id")
+    private String googleId;
+
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
@@ -55,7 +57,23 @@ public class User implements UserDetails {
         this.role = UserRole.ADMIN;
     }
 
+    public User(String name, String mail, String googleId, String passwordHash) {
+        this.name = name;
+        this.mail = mail;
+        this.googleId = googleId;
+        this.passwordHash = passwordHash;
+        this.role = UserRole.ADMIN;
+    }
+
     protected User() {
+    }
+
+    public void linkGoogleAccount(String googleId) {
+        this.googleId = googleId;
+    }
+
+    public boolean isGoogleAccountLinked() {
+        return googleId != null && !googleId.isBlank();
     }
 
     @Override

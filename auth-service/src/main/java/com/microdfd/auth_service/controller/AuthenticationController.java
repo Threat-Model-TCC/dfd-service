@@ -21,6 +21,12 @@ public class AuthenticationController {
         return ResponseEntity.ok(tokens);
     }
 
+    @PostMapping("/auth/login/google")
+    ResponseEntity<TokensDTO> authenticateWithGoogle(@RequestBody LoginDTO dto) {
+        TokensDTO tokens = authenticationService.authenticateUser(dto);
+        return ResponseEntity.ok(tokens);
+    }
+
     @PostMapping("/auth/refresh")
     ResponseEntity<TokensDTO> refreshTokens(@RequestBody String refreshToken) {
         TokensDTO tokens = authenticationService.refreshTokens(refreshToken);
