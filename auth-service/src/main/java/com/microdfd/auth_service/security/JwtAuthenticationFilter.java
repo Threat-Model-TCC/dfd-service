@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -40,19 +41,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         JwtToken jwtToken = new JwtToken(authHeader);
         username = jwtService.extractUsername(jwtToken);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        try {
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.isTokenExpired(jwtToken)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                if (jwtService.isTokenExpired(jwtToken)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                response.setHeader("Authorization", jwtToken.getValueWithBearer());
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    response.setHeader("Authorization", jwtToken.getValueWithBearer());
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } else {
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid JWT token");
+                return;
             }
+        } catch (Exception e) {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid JWT token");
+            return;
         }
+
         filterChain.doFilter(request, response);
     }
 }
