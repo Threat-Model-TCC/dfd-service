@@ -34,7 +34,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem('accessToken');
     if (token) {
       // Use the .set() method to safely inject the header in modern Axios
-      config.headers.set('Authorization', `${token}`);
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
     return config;
   },
@@ -104,7 +104,7 @@ api.interceptors.response.use(
 
         // Atualiza o header padrão do Axios para as próximas requisições
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+        originalRequest.headers.set['Authorization'] = `Bearer ${accessToken}`;
 
         // Libera todas as requisições que estavam travadas na fila
         processQueue(null, accessToken);
