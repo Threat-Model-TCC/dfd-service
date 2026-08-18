@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // URL base apontando diretamente para o seu API Gateway (porta 9191)
-const BASE_URL = 'http://localhost:9191';
+const BASE_URL = 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -33,7 +33,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Use the .set() method to safely inject the header in modern Axios
+      config.headers.set('Authorization', `${token}`);
     }
     return config;
   },
