@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -37,20 +38,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        JwtToken jwtToken = new JwtToken(authHeader);
-        String username = jwtService.extractUsername(jwtToken);
-        boolean isTokenExpired = jwtService.isTokenExpired(jwtToken);
-        boolean isAccessToken = jwtService.isAccessToken(jwtToken);
+        try {
+            JwtToken jwtToken = new JwtToken(authHeader);
+            String username = jwtService.extractUsername(jwtToken);
+            boolean isTokenExpired = jwtService.isTokenExpired(jwtToken);
+            boolean isAccessToken = jwtService.isAccessToken(jwtToken);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
-                && !isTokenExpired && isAccessToken) {
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
+                    && !isTokenExpired && isAccessToken) {
 
-            UserRole role = jwtService.extractAuthority(jwtToken);
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(username, null, List.of(role));
+                UserRole role = jwtService.extractAuthority(jwtToken);
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(username, null, List.of(role));
 
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired JWT token.");
+                return;
+            }
+        } catch (Exception e) {
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired JWT token.");
+            return;
         }
 
         filterChain.doFilter(request, response);
