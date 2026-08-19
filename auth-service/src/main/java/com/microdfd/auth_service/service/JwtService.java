@@ -111,7 +111,7 @@ public class JwtService {
         JwtToken refreshToken = generateToken(username, role, JwtTokenType.REFRESH, JWT_REFRESH_EXPIRATION);
 
         return new TokensDTO(
-                accessToken.getValueWithBearer(),
+                accessToken.getValue(),
                 refreshToken.getValue()
         );
     }
