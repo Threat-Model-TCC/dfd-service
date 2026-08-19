@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { loginUser } from '../services/api';
-import { styles } from '../styles/commonStyles'; // Seguindo seu padrão de estilos
+import React, { useState, useEffect, useCallback } from 'react';
+import { loginUser, loginWithGoogle } from '../services/api';
+import { styles } from '../styles/commonStyles';
 
 export default function Login({ onNavigateToRegister, onLoginSuccess }) {
   const [mail, setMail] = useState('');
@@ -8,10 +8,82 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleAuthSuccess = useCallback(() => {
+    setStatus("✅ Login realizado com sucesso!");
+    if (onLoginSuccess) {
+      onLoginSuccess();
+    } else {
+      window.location.href = '/dashboard';
+    }
+  }, [onLoginSuccess]);
+
+  const handleAuthError = useCallback((error, context = 'login') => {
+    console.error(`Erro no ${context}:`, error);
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      setStatus("❌ E-mail e/ou senha inválidos.");
+    } else {
+      setStatus("❌ Erro ao conectar com o servidor. Verifique o Gateway.");
+    }
+  }, []);
+
+  const handleGoogleResponse = useCallback(async (response) => {
+    setLoading(true);
+    setStatus("Autenticando com Google...");
+    try {
+      await loginWithGoogle(response.credential);
+      handleAuthSuccess();
+    } catch (error) {
+      handleAuthError(error, 'login com Google');
+    } finally {
+      setLoading(false);
+    }
+  }, [handleAuthSuccess, handleAuthError]);
+
+  // Carrega o script do Google Identity Services e renderiza o botão oficial
+  useEffect(() => {
+    const initializeGoogle = () => {
+      if (!window.google?.accounts?.id) return;
+
+      window.google.accounts.id.initialize({
+        client_id: '134929585022-9q6kj6u7c4ciqo0j0hkqh9qk88emfc4o.apps.googleusercontent.com',
+        callback: handleGoogleResponse,
+      });
+
+      const container = document.getElementById('googleSignInDiv');
+      if (container) {
+        window.google.accounts.id.renderButton(container, {
+          theme: 'outline',
+          size: 'large',
+          width: 320,
+          text: 'signin_with',
+          locale: 'pt_BR',
+        });
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      initializeGoogle();
+      return;
+    }
+
+    const existingScript = document.getElementById('google-identity-script');
+    if (existingScript) {
+      existingScript.addEventListener('load', initializeGoogle);
+      return () => existingScript.removeEventListener('load', initializeGoogle);
+    }
+
+    const script = document.createElement('script');
+    script.id = 'google-identity-script';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeGoogle;
+    document.body.appendChild(script);
+  }, [handleGoogleResponse]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Critério de Aceitação: Validar campos vazios
+
     if (!mail || !password) {
       setStatus("⚠️ Por favor, preencha todos os campos.");
       return;
@@ -21,27 +93,10 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
     setStatus("Autenticando...");
 
     try {
-      // Chama a integração com o Axios que criamos
       await loginUser(mail, password);
-      
-      setStatus("✅ Login realizado com sucesso!");
-      
-      // Executa a função de sucesso (ex: mudar o estado no App.jsx para renderizar o Dashboard)
-      if (onLoginSuccess) {
-        onLoginSuccess();
-      } else {
-        // Redirecionamento nativo caso não usem router complexo ainda
-        window.location.href = '/dashboard'; 
-      }
+      handleAuthSuccess();
     } catch (error) {
-      console.error("Erro no login:", error);
-      
-      // Critério de Aceitação: Mensagem de alerta se der erro (401, 403, etc)
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        setStatus("❌ E-mail e/ou senha inválidos.");
-      } else {
-        setStatus("❌ Erro ao conectar com o servidor. Verifique o Gateway.");
-      }
+      handleAuthError(error, 'login');
     } finally {
       setLoading(false);
     }
@@ -79,11 +134,11 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
           </div>
 
           {status && (
-            <div style={{ 
-              ...styles.status, 
+            <div style={{
+              ...styles.status,
               backgroundColor: status.includes('✅') ? '#e8f5e9' : '#ffebee',
               color: status.includes('✅') ? '#2e7d32' : '#c62828',
-              padding: '10px', 
+              padding: '10px',
               borderRadius: '4px',
               textAlign: 'center',
               marginBottom: '15px'
@@ -92,8 +147,8 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
             </div>
           )}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             style={{
               ...styles.button,
               backgroundColor: loading ? '#9e9e9e' : '#2196F3',
@@ -109,10 +164,19 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
           </button>
         </form>
 
+        <div style={authStyles.divider}>
+          <span style={authStyles.dividerLine}></span>
+          <span style={authStyles.dividerText}>ou</span>
+          <span style={authStyles.dividerLine}></span>
+        </div>
+
+        {/* O Google renderiza o botão oficial dentro dessa div */}
+        <div id="googleSignInDiv" style={authStyles.googleButtonWrapper}></div>
+
         <div style={authStyles.footer}>
           <span>Não tem uma conta? </span>
-          <button 
-            onClick={onNavigateToRegister} 
+          <button
+            onClick={onNavigateToRegister}
             style={authStyles.linkButton}
             disabled={loading}
           >
@@ -124,7 +188,6 @@ export default function Login({ onNavigateToRegister, onLoginSuccess }) {
   );
 }
 
-// Estilos locais rápidos para manter a tela centralizada e limpa (você pode mover para o commonStyles se preferir)
 const authStyles = {
   container: {
     display: 'flex',
@@ -143,45 +206,17 @@ const authStyles = {
     width: '100%',
     maxWidth: '400px',
   },
-  title: {
-    margin: '0 0 10px 0',
-    textAlign: 'center',
-    color: '#333',
-  },
-  subtitle: {
-    margin: '0 0 25px 0',
-    textAlign: 'center',
-    color: '#666',
-    fontSize: '14px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  inputGroup: {
-    marginBottom: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  label: {
-    marginBottom: '6px',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#444',
-  },
-  input: {
-    padding: '10px',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    fontSize: '15px',
-    outline: 'none',
-  },
-  footer: {
-    marginTop: '20px',
-    textAlign: 'center',
-    fontSize: '14px',
-    color: '#555',
-  },
+  title: { margin: '0 0 10px 0', textAlign: 'center', color: '#333' },
+  subtitle: { margin: '0 0 25px 0', textAlign: 'center', color: '#666', fontSize: '14px' },
+  form: { display: 'flex', flexDirection: 'column' },
+  inputGroup: { marginBottom: '20px', display: 'flex', flexDirection: 'column' },
+  label: { marginBottom: '6px', fontWeight: 'bold', fontSize: '14px', color: '#444' },
+  input: { padding: '10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '15px', outline: 'none' },
+  divider: { display: 'flex', alignItems: 'center', margin: '20px 0' },
+  dividerLine: { flex: 1, height: '1px', backgroundColor: '#ddd' },
+  dividerText: { padding: '0 10px', color: '#999', fontSize: '13px' },
+  googleButtonWrapper: { display: 'flex', justifyContent: 'center' },
+  footer: { marginTop: '20px', textAlign: 'center', fontSize: '14px', color: '#555' },
   linkButton: {
     background: 'none',
     border: 'none',
