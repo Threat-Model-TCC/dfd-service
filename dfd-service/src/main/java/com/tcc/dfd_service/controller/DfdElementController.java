@@ -11,7 +11,7 @@ public class DfdElementController {
 
     private final DfdElementService dfdElementService;
 
-    @DeleteMapping("/dfd-elements/{id}")
+    @DeleteMapping("/dfd/elements/{id}")
     public ResponseEntity<Void> deleteDfdElement(
             @PathVariable Long id) {
         dfdElementService.deleteDfdElement(id);

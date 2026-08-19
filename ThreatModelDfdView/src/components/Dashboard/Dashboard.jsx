@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BASE_URL } from '../../constants/api';
+import api from '../../services/api'; // <-- IMPORT YOUR AXIOS INSTANCE
 import { styles } from '../../styles/commonStyles';
 
 export default function Dashboard({ onOpenProject }) {
@@ -9,11 +9,9 @@ export default function Dashboard({ onOpenProject }) {
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/projects?page=1&size=10`);
-      if (response.ok) {
-        const data = await response.json();
-        setPaginatedData(data);
-      }
+      // Replaced fetch with api.get()
+      const response = await api.get(`/projects?page=1&size=10`);
+      setPaginatedData(response.data); // Axios automatically parses JSON into response.data
     } catch (error) {
       console.error("Erro GET:", error);
     } finally {
@@ -29,14 +27,12 @@ export default function Dashboard({ onOpenProject }) {
     const projectDesc = prompt("Digite a descrição do projeto:");
 
     try {
-      const response = await fetch(`${BASE_URL}/projects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: projectName, description: projectDesc || "Sem descrição" })
+      // Replaced fetch with api.post()
+      await api.post(`/projects`, { 
+        name: projectName, 
+        description: projectDesc || "Sem descrição" 
       });
-      if (response.ok) {
-        await loadProjects();
-      }
+      await loadProjects();
     } catch (error) {
       console.error("Erro POST:", error);
     }
@@ -48,20 +44,16 @@ export default function Dashboard({ onOpenProject }) {
     const newDesc = prompt("Edite a descrição do projeto:", currentDesc);
 
     try {
-      const response = await fetch(`${BASE_URL}/projects/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName, description: newDesc || "Sem descrição" })
+      // Replaced fetch with api.put()
+      await api.put(`/projects/${id}`, { 
+        name: newName, 
+        description: newDesc || "Sem descrição" 
       });
-
-      if (response.ok) {
-        console.log(`Projeto ${id} editado com sucesso.`);
-        await loadProjects();
-      } else {
-        alert("Erro ao editar o projeto.");
-      }
+      console.log(`Projeto ${id} editado com sucesso.`);
+      await loadProjects();
     } catch (error) {
       console.error("Erro PUT:", error);
+      alert("Erro ao editar o projeto.");
     }
   };
 
@@ -70,18 +62,13 @@ export default function Dashboard({ onOpenProject }) {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`${BASE_URL}/projects/${id}`, {
-        method: "DELETE"
-      });
-
-      if (response.ok) {
-        console.log(`Projeto ${id} excluído com sucesso.`);
-        await loadProjects();
-      } else {
-        alert("Erro ao excluir o projeto.");
-      }
+      // Replaced fetch with api.delete()
+      await api.delete(`/projects/${id}`);
+      console.log(`Projeto ${id} excluído com sucesso.`);
+      await loadProjects();
     } catch (error) {
       console.error("Erro DELETE:", error);
+      alert("Erro ao excluir o projeto.");
     }
   };
 

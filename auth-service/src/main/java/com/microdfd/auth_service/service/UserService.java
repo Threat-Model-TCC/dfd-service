@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -24,6 +26,22 @@ public class UserService {
 
         User user = new User(dto.name(), dto.mail(), passwordHash);
         userRepository.save(user);
+    }
+
+    @Transactional
+    public User findOrCreateGoogleUser(String mail, String name, String googleSub) {
+        String randomPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
+        return userRepository.findByMail(mail)
+                .map(existing -> linkGoogleAccountIfNeeded(existing, googleSub))
+                .orElseGet(() -> userRepository.save(new User(name, mail, googleSub, randomPasswordHash)));
+    }
+
+    private User linkGoogleAccountIfNeeded(User user, String googleSub) {
+        if (user.isGoogleAccountLinked()) {
+            user.linkGoogleAccount(googleSub);
+            userRepository.save(user);
+        }
+        return user;
     }
 
     public User findByMail(String mail) {

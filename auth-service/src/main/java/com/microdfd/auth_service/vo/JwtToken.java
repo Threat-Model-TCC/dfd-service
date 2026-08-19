@@ -15,8 +15,4 @@ public class JwtToken {
     public String getValue() {
         return this.value;
     }
-
-    public String getValueWithBearer() {
-        return "Bearer " + this.value;
-    }
 }

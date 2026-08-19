@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -7,13 +7,14 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Panel,
-  MarkerType // 1. Importação obrigatória para a seta
+  MarkerType 
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { BASE_URL } from '../../constants/api';
 import { DFD_TYPES } from '../../constants/dfdTypes';
 import { styles } from '../../styles/commonStyles';
 import { getStyleByType } from '../../utils/dfdUtils';
+import api from '../../services/api';
 
 export default function DfdCanvas({ 
   dfdId, 
@@ -30,12 +31,15 @@ export default function DfdCanvas({
   const [currentDfdData, setCurrentDfdData] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
 
-  // 2. FORÇANDO a seta diretamente no momento em que os nós se conectam
+  // SUPPRESS REACT FLOW WARNING (Error 002)
+  const nodeTypes = useMemo(() => ({}), []);
+  const edgeTypes = useMemo(() => ({}), []);
+
   const onConnect = useCallback((params) => {
     const edgeWithArrow = {
       ...params,
       markerEnd: {
-        type: MarkerType.ArrowClosed, // Define a ponta como seta
+        type: MarkerType.ArrowClosed, 
         width: 20,
         height: 20,
         color: '#000000',
@@ -49,25 +53,19 @@ export default function DfdCanvas({
     setEdges((eds) => addEdge(edgeWithArrow, eds));
   }, [setEdges]);
 
-  // Função para lidar com a exclusão de elementos
   const onNodesDelete = useCallback(async (deletedNodes) => {
     for (let node of deletedNodes) {
       if (!node.id.startsWith('temp_')) {
         try {
-          const response = await fetch(`${BASE_URL}/dfd-elements/${node.id}`, {
-            method: 'DELETE'
-          });
-          if (!response.ok) {
-            console.error(`Falha ao excluir o nó ${node.id} no backend.`);
-          }
+          // Axios automatically throws to the catch block on failure
+          await api.delete(`/dfd-elements/${node.id}`);
         } catch (err) {
-          console.error("Erro ao tentar excluir:", err);
+          console.error(`Falha ao excluir o nó ${node.id} no backend:`, err);
         }
       }
     }
   }, []);
 
-  // Função para decomposição de processos
   const handleDecompose = async (processNode) => {
     if (processNode.data.type !== DFD_TYPES.PROCESS) {
       setStatus("Somente Process pode ser decomposto.");
@@ -79,31 +77,20 @@ export default function DfdCanvas({
 
     try {
       let dfdData;
-
       const processElement = currentDfdData?.elements.find(el => el.id.toString() === processNode.id);
       
       if (processElement?.dfdChildId && processElement.dfdChildId > 0) {
-        const response = await fetch(`${BASE_URL}/dfd/${processElement.dfdChildId}`);
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar DFD filho: ${response.status}`);
-        }
-        dfdData = await response.json();
+        // AXIOS FIX: Get response.data directly
+        const response = await api.get(`/dfd/${processElement.dfdChildId}`);
+        dfdData = response.data;
       } else {
         const payload = {
           processParentId: parseInt(processNode.id),
           levelNumber: levelNumber
         };
-
-        const response = await fetch(`${BASE_URL}/dfd/child`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erro ao criar DFD filho: ${response.status}`);
-        }
-        dfdData = await response.json();
+        // AXIOS FIX: Get response.data directly, no response.json() needed
+        const response = await api.post(`/dfd/child`, payload);
+        dfdData = response.data;
       }
 
       onDecompose(dfdData.id, dfdData.levelNumber, dfdData.dfdParentId);
@@ -139,80 +126,76 @@ export default function DfdCanvas({
   const loadData = async () => {
     setStatus(`Loading diagram ${dfdId} from DB...`);
     try {
-      const response = await fetch(`${BASE_URL}/dfd/${dfdId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentDfdData(data);
-        
-        const loadedNodes = data.elements.map(item => ({
-          id: item.id.toString(),
-          type: 'default',
-          position: { x: item.xValue, y: item.yValue },
-          data: { 
-            label: item.name, 
-            type: item.type, 
-            dfdChildId: item.dfdChildId,
-            uuid: item.uuid || crypto.randomUUID() 
-          },
-          style: getStyleByType(item.type)
-        }));
-        
-        setNodes(loadedNodes);
+      // AXIOS FIX: No "response.ok" check needed. If it fails, it goes to catch.
+      const response = await api.get(`/dfd/${dfdId}`);
+      const data = response.data; // Data is already parsed!
+      setCurrentDfdData(data);
+      
+      const loadedNodes = data.elements.map(item => ({
+        id: item.id.toString(),
+        type: 'default',
+        position: { x: item.xValue, y: item.yValue },
+        data: { 
+          label: item.name, 
+          type: item.type, 
+          dfdChildId: item.dfdChildId,
+          uuid: item.uuid || crypto.randomUUID() 
+        },
+        style: getStyleByType(item.type)
+      }));
+      
+      setNodes(loadedNodes);
 
-        // Conversor reverso para desenhar as setas na tela
-        const getHandleStr = (posInt, defaultHandle) => {
-          switch(posInt) {
-            case 0: return 'top';
-            case 1: return 'right';
-            case 2: return 'bottom';
-            case 3: return 'left';
-            default: return defaultHandle;
-          }
-        };
-
-        const incomingFlows = data.flows || data.dataFlows; 
-
-        if (incomingFlows && incomingFlows.length > 0) {
-          const loadedEdges = incomingFlows.map(flow => {
-            const sourceNode = loadedNodes.find(n => n.data.uuid === flow.sourceElementIdentifier);
-            const targetNode = loadedNodes.find(n => n.data.uuid === flow.targetElementIdentifier);
-
-            if (sourceNode && targetNode) {
-              return {
-                id: `flow_${flow.id}`,
-                source: sourceNode.id,
-                target: targetNode.id,
-                sourceHandle: getHandleStr(flow.sourcePosition, 'bottom'),
-                targetHandle: getHandleStr(flow.targetPosition, 'top'),
-                markerEnd: {
-                  type: MarkerType.ArrowClosed,
-                  width: 20,
-                  height: 20,
-                  color: '#000000', 
-                },
-                style: {
-                  strokeWidth: 2,
-                  stroke: '#000000', 
-                },
-                data: { 
-                  backendId: flow.id,
-                  name: flow.name,
-                  description: flow.description
-                }
-              };
-            }
-            return null;
-          }).filter(edge => edge !== null);
-
-          setEdges(loadedEdges);
-        } else {
-          setEdges([]); 
+      const getHandleStr = (posInt, defaultHandle) => {
+        switch(posInt) {
+          case 0: return 'top';
+          case 1: return 'right';
+          case 2: return 'bottom';
+          case 3: return 'left';
+          default: return defaultHandle;
         }
+      };
 
-        setStatus(`Loaded ${data.elements.length} elements. Level: ${data.levelNumber}`);
+      const incomingFlows = data.flows || data.dataFlows; 
+
+      if (incomingFlows && incomingFlows.length > 0) {
+        const loadedEdges = incomingFlows.map(flow => {
+          const sourceNode = loadedNodes.find(n => n.data.uuid === flow.sourceElementIdentifier);
+          const targetNode = loadedNodes.find(n => n.data.uuid === flow.targetElementIdentifier);
+
+          if (sourceNode && targetNode) {
+            return {
+              id: `flow_${flow.id}`,
+              source: sourceNode.id,
+              target: targetNode.id,
+              sourceHandle: getHandleStr(flow.sourcePosition, 'bottom'),
+              targetHandle: getHandleStr(flow.targetPosition, 'top'),
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 20,
+                height: 20,
+                color: '#000000', 
+              },
+              style: {
+                strokeWidth: 2,
+                stroke: '#000000', 
+              },
+              data: { 
+                backendId: flow.id,
+                name: flow.name,
+                description: flow.description
+              }
+            };
+          }
+          return null;
+        }).filter(edge => edge !== null);
+
+        setEdges(loadedEdges);
       } else {
-        setStatus(`Error loading: ${response.status}`);
+        setEdges([]); 
       }
+
+      setStatus(`Loaded ${data.elements.length} elements. Level: ${data.levelNumber}`);
     } catch (error) {
       console.error(error);
       setStatus("Error: Could not connect to Backend.");
@@ -233,7 +216,6 @@ export default function DfdCanvas({
       uuid: node.data.uuid
     }));
 
-    // Função auxiliar para mapear posição das setas
     const getPosInt = (handleId, defaultPos) => {
       if (!handleId) return defaultPos;
       if (handleId.includes('top')) return 0;
@@ -243,7 +225,6 @@ export default function DfdCanvas({
       return defaultPos;
     };
 
-    // Mapeando as setas para o Backend
     const mappedDataFlows = edges.map(edge => {
       const sourceNode = nodes.find(n => n.id === edge.source);
       const targetNode = nodes.find(n => n.id === edge.target);
@@ -261,22 +242,14 @@ export default function DfdCanvas({
 
     const payload = {
       elements: mappedElements,
-      dataFlows: mappedDataFlows // <-- Agora enviando as setas corretamente!
+      dataFlows: mappedDataFlows
     };
 
     try {
-      const response = await fetch(`${BASE_URL}/dfd/${dfdId}/elements`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        setStatus(`Saved successfully.`);
-        await loadData(); 
-      } else {
-        setStatus(`Error saving: ${response.status}`);
-      }
+      // AXIOS FIX: Removed the undefined "response" variable check. 
+      await api.put(`/dfd/${dfdId}/elements`, payload);
+      setStatus(`Saved successfully.`);
+      await loadData(); 
     } catch (error) {
       console.error("Save error:", error);
       setStatus("Error: Could not save to Backend.");
@@ -305,15 +278,18 @@ export default function DfdCanvas({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes} // Added to suppress warning
+        edgeTypes={edgeTypes} // Added to suppress warning
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDoubleClick={onNodeDoubleClick}
-        onNodeClick={onNodeClick} // <-- Adicionado: seleciona o nó
-        onPaneClick={onPaneClick} // <-- Adicionado: limpa a seleção ao clicar fora
+        onNodeClick={onNodeClick} 
+        onPaneClick={onPaneClick} 
         onNodesDelete={onNodesDelete}
         fitView
       >
+        {/* ... Rest of your component (Panel, Controls, MiniMap, Background) remains identical ... */}
         <Panel position="top-left">
           <div style={styles.toolbar}>
             <button style={{...styles.button, ...styles.btnBack}} onClick={onBackToDashboard}>
@@ -341,8 +317,6 @@ export default function DfdCanvas({
             <button style={{...styles.button, ...styles.btnLoad}} onClick={loadData}>📂 Load DB</button>
             <button style={{...styles.button, ...styles.btnSave}} onClick={saveAll}>💾 Save</button>
 
-            {/* --- NOVO BOTÃO CONTEXTUAL DE DECOMPOSIÇÃO --- */}
-            {/* --- NOVO BOTÃO CONTEXTUAL DE DECOMPOSIÇÃO --- */}
             {selectedNode && selectedNode.data.type === DFD_TYPES.PROCESS && (
               <>
                 <div style={{width: '1px', height: '20px', background: '#ccc', margin: '0 5px'}}></div>
@@ -372,8 +346,6 @@ export default function DfdCanvas({
             <div style={styles.status}>{status} (DFD ID: {dfdId} | Level: {levelNumber})</div>
           </div>
         </Panel>
-
-        {/* Repare que deletamos aquele bloco de código {contextMenu && selectedNode && ( ... )} daqui! */}
 
         <Controls />
         <MiniMap />

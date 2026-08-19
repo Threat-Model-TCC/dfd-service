@@ -20,10 +20,16 @@ spring:
     gateway:
       server:
         webmvc:
-          routes[0]:
-            id: DFD-SERVICE
-            uri: lb://DFD-SERVICE
-            predicates: Path=/**
+          routes:
+            - id: AUTH-SERVICE
+              uri: lb://AUTH-SERVICE
+              predicates:
+                - Path=/auth/**
+            
+            - id: DFD-SERVICE
+              uri: lb://DFD-SERVICE
+              predicates:
+                - Path=/dfd/**, /projects/**
 
 logging:
   level:
