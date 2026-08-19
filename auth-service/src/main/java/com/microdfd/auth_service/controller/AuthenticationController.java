@@ -1,5 +1,6 @@
 package com.microdfd.auth_service.controller;
 
+import com.microdfd.auth_service.dto.GoogleLoginDTO;
 import com.microdfd.auth_service.dto.LoginDTO;
 import com.microdfd.auth_service.dto.TokensDTO;
 import com.microdfd.auth_service.service.AuthenticationService;
@@ -18,6 +19,12 @@ public class AuthenticationController {
     @PostMapping("/auth/login")
     ResponseEntity<TokensDTO> authenticateUser(@RequestBody LoginDTO dto) {
         TokensDTO tokens = authenticationService.authenticateUser(dto);
+        return ResponseEntity.ok(tokens);
+    }
+
+    @PostMapping("/auth/login/google")
+    ResponseEntity<TokensDTO> authenticateWithGoogle(@RequestBody GoogleLoginDTO dto) {
+        TokensDTO tokens = authenticationService.authenticateWithGoogle(dto);
         return ResponseEntity.ok(tokens);
     }
 

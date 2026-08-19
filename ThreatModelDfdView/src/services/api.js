@@ -158,6 +158,21 @@ export const loginUser = async (mail, password) => {
 };
 
 /**
+ * Realiza login/cadastro via Google OAuth
+ * @param {string} idToken - o credential retornado pelo Google Identity Services
+ */
+export const loginWithGoogle = async (idToken) => {
+  // Bate com o GoogleLoginDTO do Spring: record GoogleLoginDTO(String idToken)
+  const response = await api.post('/auth/login/google', { idToken });
+
+  const { accessToken, refreshToken } = response.data;
+  localStorage.setItem('accessToken', accessToken);
+  localStorage.setItem('refreshToken', refreshToken);
+
+  return response.data;
+};
+
+/**
  * Cria uma nova conta de usuário
  * @param {string} name 
  * @param {string} mail 
