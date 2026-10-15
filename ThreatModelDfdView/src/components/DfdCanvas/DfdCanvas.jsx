@@ -7,7 +7,10 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Panel,
-  MarkerType 
+  MarkerType,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { BASE_URL } from '../../constants/api';
@@ -15,6 +18,65 @@ import { DFD_TYPES } from '../../constants/dfdTypes';
 import { styles } from '../../styles/commonStyles';
 import { getStyleByType } from '../../utils/dfdUtils';
 import api from '../../services/api';
+
+const DEFAULT_FLOW_NAME = 'Novo Fluxo';
+
+function DataFlowEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  markerEnd,
+  style,
+  data,
+  onEdit
+}) {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition
+  });
+  const name = data?.name || DEFAULT_FLOW_NAME;
+
+  const handleDoubleClick = (event) => {
+    event.stopPropagation();
+    onEdit(id, name);
+  };
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          className="nodrag nopan"
+          onDoubleClick={handleDoubleClick}
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            padding: '3px 6px',
+            borderRadius: '3px',
+            background: '#ffffff',
+            border: '1px solid #d0d0d0',
+            color: '#222222',
+            fontSize: '12px',
+            cursor: 'text',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'all'
+          }}
+          title="Double-click to edit the data flow name"
+        >
+          {name}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
 
 export default function DfdCanvas({ 
   dfdId, 
@@ -33,11 +95,29 @@ export default function DfdCanvas({
 
   // SUPPRESS REACT FLOW WARNING (Error 002)
   const nodeTypes = useMemo(() => ({}), []);
-  const edgeTypes = useMemo(() => ({}), []);
+  const updateEdgeName = useCallback((edgeId, currentName) => {
+    const newName = prompt('Edit data flow name:', currentName);
+    if (newName === null) return;
+
+    setEdges((currentEdges) => currentEdges.map(edge => (
+      edge.id === edgeId
+        ? { ...edge, data: { ...edge.data, name: newName } }
+        : edge
+    )));
+  }, [setEdges]);
+
+  const edgeTypes = useMemo(() => ({
+    dataFlow: (props) => <DataFlowEdge {...props} onEdit={updateEdgeName} />
+  }), [updateEdgeName]);
 
   const onConnect = useCallback((params) => {
     const edgeWithArrow = {
       ...params,
+      type: 'dataFlow',
+      data: {
+        name: DEFAULT_FLOW_NAME,
+        description: ''
+      },
       markerEnd: {
         type: MarkerType.ArrowClosed, 
         width: 20,
@@ -166,6 +246,7 @@ export default function DfdCanvas({
           if (sourceNode && targetNode) {
             return {
               id: `flow_${flow.id}`,
+              type: 'dataFlow',
               source: sourceNode.id,
               target: targetNode.id,
               sourceHandle: getHandleStr(flow.sourcePosition, 'bottom'),
@@ -231,8 +312,8 @@ export default function DfdCanvas({
 
       return {
         id: edge.data?.backendId || 0,
-        name: edge.data?.name || "Novo Fluxo",
-        description: edge.data?.description || "",
+        name: edge.data?.name ?? DEFAULT_FLOW_NAME,
+        description: edge.data?.description ?? "",
         sourceElementIdentifier: sourceNode ? sourceNode.data.uuid : "",
         targetElementIdentifier: targetNode ? targetNode.data.uuid : "",
         sourcePosition: getPosInt(edge.sourceHandle, 2), 
@@ -283,6 +364,9 @@ export default function DfdCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onEdgeDoubleClick={(event, edge) => {
+          updateEdgeName(edge.id, edge.data?.name || DEFAULT_FLOW_NAME);
+        }}
         onNodeDoubleClick={onNodeDoubleClick}
         onNodeClick={onNodeClick} 
         onPaneClick={onPaneClick} 
